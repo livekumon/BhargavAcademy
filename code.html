@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Bhargav Academy | Elite SAT Math &amp; AP Calculus Tutoring</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&amp;family=Outfit:wght@300;400;500;600&amp;family=DM+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --navy:#09192f;--navy-mid:#0f2444;--navy-light:#1a3560;
+  --gold:#c9a84c;--gold-light:#e4c97b;--gold-glow:rgba(201,168,76,0.18);
+  --cream:#f6f1e9;--cream-dark:#ece5d8;--text:#1a1a2e;--muted:#637085;--white:#ffffff;
+  --serif:'Cormorant Garamond',Georgia,serif;--sans:'Outfit',sans-serif;--mono:'DM Mono',monospace;--radius:6px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--sans);color:var(--text);background:var(--cream);overflow-x:hidden;}
+.reveal,.reveal-left,.reveal-right{opacity:0;transition:opacity .75s ease,transform .75s ease;}
+.reveal{transform:translateY(36px);}.reveal-left{transform:translateX(-40px);}.reveal-right{transform:translateX(40px);}
+.reveal.visible,.reveal-left.visible,.reveal-right.visible{opacity:1;transform:none;}
+.d1{transition-delay:.1s}.d2{transition-delay:.2s}.d3{transition-delay:.3s}.d4{transition-delay:.4s}.d5{transition-delay:.5s}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:1.4rem 3rem;background:transparent;transition:background .4s,padding .3s,border-color .4s;border-bottom:1px solid transparent;}
+nav.scrolled{background:rgba(9,25,47,0.97);backdrop-filter:blur(16px);padding:.9rem 3rem;border-color:rgba(201,168,76,0.18);}
+.nav-logo{font-family:var(--serif);font-size:1.55rem;font-weight:700;color:var(--white);text-decoration:none;letter-spacing:.01em;opacity:0;animation:fadeDown .6s .1s ease forwards;}
+.nav-logo span{color:var(--gold);}
+.nav-links{display:flex;gap:2.2rem;list-style:none;align-items:center;}
+.nav-links li{opacity:0;animation:fadeDown .5s ease forwards;}
+.nav-links li:nth-child(1){animation-delay:.15s}.nav-links li:nth-child(2){animation-delay:.2s}.nav-links li:nth-child(3){animation-delay:.25s}.nav-links li:nth-child(4){animation-delay:.3s}.nav-links li:nth-child(5){animation-delay:.35s}.nav-links li:nth-child(6){animation-delay:.4s}
+.nav-links a{color:rgba(255,255,255,0.75);text-decoration:none;font-size:.82rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;position:relative;transition:color .2s;}
+.nav-links a::after{content:'';position:absolute;bottom:-4px;left:0;right:0;height:1px;background:var(--gold);transform:scaleX(0);transform-origin:left;transition:transform .25s ease;}
+.nav-links a:hover{color:var(--gold-light);}.nav-links a:hover::after{transform:scaleX(1);}
+.nav-cta{background:var(--gold)!important;color:var(--navy)!important;padding:.6rem 1.4rem;border-radius:3px;font-weight:600!important;transition:all .25s!important;letter-spacing:.04em!important;}
+.nav-cta:hover{background:var(--gold-light)!important;transform:translateY(-1px)!important;box-shadow:0 5px 18px rgba(201,168,76,0.4)!important;}.nav-cta::after{display:none!important;}
+.hero{min-height:100vh;background:var(--navy);display:grid;grid-template-columns:1fr 1.2fr;position:relative;overflow:hidden;padding-top:80px;}
+.hero-grid-bg{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(201,168,76,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.04) 1px,transparent 1px);background-size:70px 70px;animation:bgPan 35s linear infinite;}
+@keyframes bgPan{to{background-position:70px 70px;}}
+.hero-glow{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 55% 65% at 78% 50%,rgba(201,168,76,0.09) 0%,transparent 65%),radial-gradient(ellipse 35% 55% at 10% 75%,rgba(201,168,76,0.05) 0%,transparent 60%);}
+.math-float{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
+.math-float span{position:absolute;font-family:var(--mono);color:rgba(201,168,76,0.07);user-select:none;animation:mathFloat linear infinite;}
+@keyframes mathFloat{0%{transform:translateY(0) rotate(0deg);opacity:.4;}50%{opacity:.8;}100%{transform:translateY(-30px) rotate(8deg);opacity:.4;}}
+.hero-left{padding:5rem 3rem 4rem 5rem;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:2;}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:.8rem;font-family:var(--mono);font-size:.72rem;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:2rem;opacity:0;animation:fadeUp .6s .3s ease forwards;}
+.hero-eyebrow::before{content:'';display:block;width:2.5rem;height:1px;background:var(--gold);}
+.hero h1{font-family:var(--serif);font-size:clamp(2.6rem,4.5vw,4.2rem);font-weight:700;line-height:1.05;color:var(--white);margin-bottom:1.5rem;opacity:0;animation:fadeUp .7s .45s ease forwards;}
+.hero h1 em{font-style:italic;color:var(--gold);display:block;}
+.hero-sub{font-size:1.1rem;line-height:1.8;color:rgba(255,255,255,0.62);max-width:520px;margin-bottom:2.5rem;opacity:0;animation:fadeUp .7s .6s ease forwards;}
+.hero-actions{display:flex;gap:1rem;flex-wrap:wrap;align-items:center;opacity:0;animation:fadeUp .7s .75s ease forwards;}
+.btn-primary{display:inline-flex;align-items:center;gap:.5rem;background:var(--gold);color:var(--navy);padding:1rem 2.1rem;border-radius:3px;font-weight:600;font-size:.95rem;letter-spacing:.02em;text-decoration:none;position:relative;overflow:hidden;transition:background .25s,color .25s,transform .2s,box-shadow .25s;border:2px solid var(--gold);}
+.btn-primary::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,0.14);transform:translateX(-110%) skewX(-15deg);transition:transform .4s ease;}
+.btn-primary:hover::after{transform:translateX(110%) skewX(-15deg);}
+.btn-primary:hover{background:transparent;color:var(--gold);transform:translateY(-3px);box-shadow:0 12px 30px rgba(201,168,76,0.3);}
+.btn-ghost{color:rgba(255,255,255,0.7);font-size:.9rem;text-decoration:none;letter-spacing:.04em;border-bottom:1px solid rgba(255,255,255,0.25);padding-bottom:2px;transition:color .2s,border-color .2s,transform .2s;}
+.btn-ghost:hover{color:var(--gold);border-color:var(--gold);transform:translateX(5px);}
+.hero-stats{display:flex;gap:2.5rem;margin-top:3.5rem;padding-top:2.5rem;border-top:1px solid rgba(255,255,255,0.08);opacity:0;animation:fadeUp .7s .9s ease forwards;}
+.stat-num{font-family:var(--serif);font-size:2.4rem;font-weight:700;color:var(--gold);display:block;line-height:1;}
+.stat-label{font-size:.72rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.09em;margin-top:.4rem;display:block;}
+.hero-right{position:relative;z-index:2;display:flex;align-items:flex-end;justify-content:center;padding:0 0 0 0;overflow:hidden;}
+.photo-wrap{position:relative;width:100%;max-width:580px;align-self:flex-end;opacity:0;animation:heroIn 1s .5s cubic-bezier(0.22,1,0.36,1) forwards;}
+@keyframes heroIn{from{opacity:0;transform:translateY(60px) scale(0.95);}to{opacity:1;transform:none;}}
+.photo-ring{position:absolute;bottom:-60px;left:50%;transform:translateX(-50%);width:110%;aspect-ratio:1;border-radius:50%;background:radial-gradient(ellipse,rgba(201,168,76,0.12) 0%,transparent 70%);animation:ringPulse 4s ease-in-out infinite alternate;}
+@keyframes ringPulse{from{transform:translateX(-50%) scale(0.94);}to{transform:translateX(-50%) scale(1.06);}}
+.hero-photo{width:100%;display:block;position:relative;z-index:2;filter:drop-shadow(0 -15px 50px rgba(201,168,76,0.14));}
+.badge{position:absolute;z-index:3;padding:.8rem 1.2rem;border-radius:4px;font-family:var(--mono);font-size:.8rem;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,0.35);animation:badgeBob ease-in-out infinite alternate;}
+@keyframes badgeBob{from{transform:translateY(0);}to{transform:translateY(-8px);}}
+.badge-iit{top:15%;left:2rem;background:var(--gold);color:var(--navy);font-weight:700;letter-spacing:.06em;text-transform:uppercase;animation-duration:3s;}
+.badge-exp{bottom:25%;right:3rem;background:var(--navy-mid);color:var(--white);border:1px solid rgba(201,168,76,0.3);animation-duration:3.5s;animation-delay:.5s;}
+.badge-exp span{color:var(--gold);font-weight:700;}
+section{padding:6.5rem 0;}
+.container{max-width:1200px;margin:0 auto;padding:0 2.5rem;}
+.section-label{font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:1rem;display:flex;align-items:center;gap:.75rem;}
+.section-label::before{content:'';width:2rem;height:1px;background:var(--gold);display:block;}
+.section-title{font-family:var(--serif);font-size:clamp(2rem,3.2vw,2.8rem);font-weight:700;line-height:1.15;color:var(--navy);margin-bottom:1.25rem;}
+.section-sub{font-size:1.05rem;color:var(--muted);line-height:1.75;max-width:600px;}
+.about{background:var(--white);}
+.about-grid{display:grid;grid-template-columns:1.2fr 1.3fr;gap:6rem;align-items:start;}
+.instructor-frame{border-radius:8px;overflow:hidden;position:relative;box-shadow:0 30px 80px rgba(9,25,47,0.22);transition:transform .4s ease,box-shadow .4s ease;}
+.instructor-frame:hover{transform:translateY(-8px);box-shadow:0 40px 90px rgba(9,25,47,0.25);}
+.instructor-frame img{width:100%;display:block;object-fit:cover;min-height:600px;}
+.instructor-frame::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(9,25,47,0.6) 0%,transparent 40%);pointer-events:none;}
+.frame-overlay{position:absolute;bottom:1.75rem;left:1.75rem;right:1.75rem;z-index:2;color:var(--white);font-family:var(--serif);font-size:1.4rem;font-weight:700;}
+.frame-overlay small{display:block;font-family:var(--mono);font-size:.75rem;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.35rem;font-style:normal;}
+.cred-strip{margin-top:2rem;border:1px solid var(--cream-dark);border-radius:6px;overflow:hidden;}
+.cred-row{padding:1.1rem 1.4rem;display:flex;align-items:flex-start;gap:1.1rem;border-bottom:1px solid var(--cream-dark);background:var(--cream);transition:background .2s;}
+.cred-row:last-child{border-bottom:none;}.cred-row:hover{background:var(--cream-dark);}
+.cred-icon{font-size:1.2rem;flex-shrink:0;margin-top:.1rem;}
+.cred-key{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-family:var(--mono);}
+.cred-val{font-size:.92rem;font-weight:600;color:var(--navy);margin-top:.2rem;}
+.about-bio{font-size:1.1rem;line-height:1.9;color:#454555;margin:1.5rem 0 2.5rem;border-left:3px solid var(--gold);padding-left:1.5rem;}
+.why-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;}
+.why-card{background:var(--cream);border:1px solid var(--cream-dark);border-radius:6px;padding:1.4rem 1.6rem;border-top:3px solid transparent;transition:all .3s;}
+.why-card:hover{border-top-color:var(--gold);transform:translateY(-4px);box-shadow:0 10px 28px rgba(9,25,47,0.08);}
+.why-title{font-weight:600;font-size:.9rem;color:var(--navy);margin-bottom:.45rem;}
+.why-desc{font-size:.84rem;color:var(--muted);line-height:1.6;}
+.methodology{background:var(--navy);position:relative;overflow:hidden;}
+.meth-bg{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 50% 60% at 80% 20%,rgba(201,168,76,0.07) 0%,transparent 65%),radial-gradient(ellipse 40% 45% at 15% 80%,rgba(201,168,76,0.04) 0%,transparent 60%);}
+.methodology .section-title{color:var(--white);}.methodology .section-sub{color:rgba(255,255,255,0.55);}
+.method-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:3.5rem;}
+.method-card{background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.12);border-radius:8px;padding:2rem 1.75rem;position:relative;overflow:hidden;transition:all .35s;cursor:default;}
+.method-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);transform:scaleX(0);transition:transform .4s ease;}
+.method-card:hover{background:rgba(201,168,76,0.05);border-color:rgba(201,168,76,0.28);transform:translateY(-5px);}.method-card:hover::before{transform:scaleX(1);}
+.method-num{font-family:var(--serif);font-size:3.2rem;font-weight:700;color:rgba(201,168,76,0.1);line-height:1;margin-bottom:.75rem;}
+.method-title{font-family:var(--serif);font-size:1.18rem;font-weight:600;color:var(--white);margin-bottom:.75rem;}
+.method-desc{font-size:.87rem;line-height:1.72;color:rgba(255,255,255,0.5);}
+.method-tags{margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid rgba(255,255,255,0.07);display:flex;flex-wrap:wrap;gap:.4rem;}
+.tag{font-family:var(--mono);font-size:.68rem;padding:.22rem .6rem;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.18);color:var(--gold);border-radius:2px;}
+.setup-box{margin-top:3rem;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.18);border-radius:8px;padding:1.75rem 2.5rem;display:grid;grid-template-columns:auto 1fr auto;gap:2rem;align-items:center;}
+.setup-icon{font-size:2rem;}
+.setup-text h4{color:var(--white);font-family:var(--serif);font-size:1.1rem;margin-bottom:.4rem;}
+.setup-text p{color:rgba(255,255,255,0.5);font-size:.88rem;line-height:1.6;}
+.setup-reqs{text-align:right;font-size:.82rem;color:rgba(255,255,255,0.4);line-height:1.75;}
+.setup-reqs strong{color:var(--gold);display:block;margin-bottom:.25rem;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;font-family:var(--mono);}
+.fit{background:var(--cream);}
+.fit-grid{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:start;}
+.fit-list{list-style:none;margin-top:2rem;}
+.fit-list li{display:grid;grid-template-columns:38px 1fr;gap:1.2rem;align-items:flex-start;padding:1.25rem 0;border-bottom:1px solid var(--cream-dark);transition:transform .2s;}
+.fit-list li:hover{transform:translateX(5px);}.fit-list li:last-child{border-bottom:none;}
+.fit-bullet{width:38px;height:38px;background:var(--navy);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--gold);font-size:.73rem;font-weight:700;font-family:var(--mono);transition:background .2s;}
+.fit-list li:hover .fit-bullet{background:var(--gold);color:var(--navy);}
+.fit-item-title{font-weight:600;color:var(--navy);margin-bottom:.35rem;font-size:.95rem;}
+.fit-item-desc{font-size:.875rem;color:var(--muted);line-height:1.6;}
+.cta-box{background:var(--navy);border-radius:8px;padding:2.5rem;position:sticky;top:100px;box-shadow:0 20px 50px rgba(9,25,47,0.2);}
+.cta-box h3{font-family:var(--serif);font-size:1.7rem;color:var(--white);margin-bottom:.75rem;line-height:1.25;}
+.cta-box>p{color:rgba(255,255,255,0.5);font-size:.88rem;line-height:1.7;margin-bottom:1.75rem;}
+.cta-steps{list-style:none;margin-bottom:1.75rem;}
+.cta-steps li{display:flex;align-items:flex-start;gap:1rem;padding:.65rem 0;color:rgba(255,255,255,0.6);font-size:.88rem;}
+.step-dot{width:24px;height:24px;flex-shrink:0;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:var(--gold);font-family:var(--mono);}
+.form-block{background:rgba(255,255,255,0.04);border:1px solid rgba(201,168,76,0.15);border-radius:6px;padding:1.4rem;margin-bottom:1.5rem;}
+.form-group{margin-bottom:.9rem;}
+.form-label{display:block;font-size:.72rem;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.4rem;font-family:var(--mono);}
+.form-input{width:100%;padding:.75rem 1rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:white;font-size:.9rem;outline:none;font-family:var(--sans);transition:border-color .2s,background .2s;}
+.form-input:focus{border-color:rgba(201,168,76,0.5);background:rgba(255,255,255,0.09);}
+.form-note{font-size:.72rem;color:rgba(255,255,255,0.22);text-align:center;margin-top:.9rem;}
+.testimonials{background:var(--white);}
+.testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.75rem;margin-top:3.5rem;}
+.testi-card{background:var(--cream);border:1px solid var(--cream-dark);border-radius:8px;padding:2rem;position:relative;transition:all .3s;cursor:default;}
+.testi-card::before{content:'';position:absolute;inset:0;border-radius:8px;border:2px solid transparent;transition:border-color .3s;pointer-events:none;}
+.testi-card:hover::before{border-color:var(--gold);}
+.testi-card:hover{transform:translateY(-6px);box-shadow:0 16px 40px rgba(9,25,47,0.1);}
+.quote-mark{font-family:var(--serif);font-size:5rem;line-height:.7;color:var(--gold);opacity:.22;margin-bottom:1rem;display:block;}
+.testi-text{font-size:.93rem;line-height:1.8;color:#474762;margin-bottom:1.5rem;font-style:italic;}
+.testi-footer{display:flex;align-items:center;gap:.85rem;padding-top:1.2rem;border-top:1px solid var(--cream-dark);}
+.avatar{width:42px;height:42px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:1rem;font-weight:700;color:var(--gold);flex-shrink:0;}
+.testi-name{font-weight:600;font-size:.9rem;color:var(--navy);}
+.testi-role{font-size:.76rem;color:var(--muted);margin-top:.12rem;}
+.score-pill{margin-left:auto;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.25);padding:.25rem .65rem;border-radius:20px;font-size:.77rem;font-weight:700;color:#8a6c1c;font-family:var(--mono);white-space:nowrap;}
+.testi-grid-4{grid-template-columns:repeat(4,1fr);gap:1.25rem;}
+a.testi-card{text-decoration:none;color:inherit;display:block;cursor:pointer;}
+a.testi-card:hover{transform:translateY(-8px);box-shadow:0 20px 48px rgba(9,25,47,0.14);}
+a.testi-card:hover::before{border-color:var(--gold);}
+.testi-linkedin-badge{position:absolute;top:1rem;right:1rem;font-size:.65rem;font-family:var(--mono);color:var(--gold);opacity:0;transition:opacity .2s;letter-spacing:.06em;text-transform:uppercase;}
+a.testi-card:hover .testi-linkedin-badge{opacity:1;}
+.faq{background:var(--cream);}
+.faq-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-top:3.5rem;}
+.faq-item{background:var(--white);border:1px solid var(--cream-dark);border-radius:6px;padding:1.5rem;cursor:pointer;transition:all .25s;}
+.faq-item:hover{border-color:var(--gold);box-shadow:0 6px 20px rgba(9,25,47,0.07);transform:translateY(-2px);}
+.faq-q{font-weight:600;font-size:.94rem;color:var(--navy);display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:.75rem;}
+.faq-icon{color:var(--gold);font-size:1.1rem;flex-shrink:0;transition:transform .25s;}
+.faq-item:hover .faq-icon{transform:rotate(45deg);}
+.faq-a{font-size:.87rem;color:var(--muted);line-height:1.7;}
+.final-cta{background:var(--navy);position:relative;overflow:hidden;padding:8rem 0;text-align:center;}
+.final-cta-glow{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:700px;height:700px;border-radius:50%;background:radial-gradient(ellipse,rgba(201,168,76,0.09) 0%,transparent 65%);animation:ctaPulse 5s ease-in-out infinite alternate;}
+@keyframes ctaPulse{from{transform:translate(-50%,-50%) scale(.88);}to{transform:translate(-50%,-50%) scale(1.12);}}
+.final-cta h2{font-family:var(--serif);font-size:clamp(2.4rem,4vw,3.6rem);color:var(--white);font-weight:700;line-height:1.1;margin-bottom:1.25rem;position:relative;z-index:2;}
+.final-cta h2 em{font-style:italic;color:var(--gold);}
+.final-cta p{font-size:1.1rem;color:rgba(255,255,255,0.5);margin-bottom:3rem;position:relative;z-index:2;}
+.contact-strip{margin-top:3rem;display:flex;justify-content:center;gap:3rem;position:relative;z-index:2;flex-wrap:wrap;}
+.contact-item{display:flex;align-items:center;gap:.6rem;color:rgba(255,255,255,0.4);font-size:.9rem;text-decoration:none;transition:color .2s;}
+.contact-item:hover{color:var(--gold);}
+footer{background:#06101f;padding:2rem 3rem;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(201,168,76,0.1);flex-wrap:wrap;gap:1rem;}
+.footer-logo{font-family:var(--serif);font-size:1.2rem;color:rgba(255,255,255,0.35);}
+.footer-logo span{color:var(--gold);}
+.footer-copy{font-size:.78rem;color:rgba(255,255,255,0.2);}
+.footer-links{display:flex;gap:1.75rem;}
+.footer-links a{font-size:.78rem;color:rgba(255,255,255,0.3);text-decoration:none;transition:color .2s;}
+.footer-links a:hover{color:var(--gold);}
+.particles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.particle{position:absolute;width:2px;height:2px;background:var(--gold);border-radius:50%;opacity:0;animation:particleRise linear infinite;}
+@keyframes particleRise{0%{transform:translateY(100vh) scale(0);opacity:0;}10%{opacity:.5;}90%{opacity:.2;}100%{transform:translateY(-10vh) translateX(var(--tx)) scale(2);opacity:0;}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:none;}}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-18px);}to{opacity:1;transform:none;}}
+@media(max-width:980px){
+  .hero{grid-template-columns:1fr;}.hero-right{display:none;}.hero-left{padding:4rem 1.5rem 3rem;}
+  nav{padding:1rem 1.5rem;}nav.scrolled{padding:.8rem 1.5rem;}.nav-links{display:none;}
+  .about-grid,.fit-grid{grid-template-columns:1fr;gap:2.5rem;}
+  .instructor-frame img{min-height:auto;}
+  .method-grid{grid-template-columns:1fr;}
+  .testi-grid,.testi-grid-4{grid-template-columns:1fr;}
+  .faq-grid{grid-template-columns:1fr;}.why-grid{grid-template-columns:1fr;}
+  .setup-box{grid-template-columns:1fr;text-align:left;}.setup-reqs{text-align:left;}
+  footer{flex-direction:column;text-align:center;}.footer-links{justify-content:center;flex-wrap:wrap;}
+}
+</style>
+</head>
+<body>
+<div class="particles" id="particles"></div>
+<nav id="mainNav">
+<a class="nav-logo" href="#">Bhargav <span>Academy</span></a>
+<ul class="nav-links">
+<li><a href="#about">About</a></li>
+<li><a href="#methodology">Methodology</a></li>
+<li><a href="#fit">Who I Work With</a></li>
+<li><a href="#testimonials">Results</a></li>
+<li><a href="#faq">FAQ</a></li>
+<li><a class="nav-cta" href="#contact">Free Scholarship</a></li>
+</ul>
+</nav>
+<section class="hero">
+<div class="hero-grid-bg"></div>
+<div class="hero-glow"></div>
+<div aria-hidden="true" class="math-float" id="mathFloat"></div>
+<div class="hero-left">
+<span class="hero-eyebrow">IIT Kanpur · M.Tech · 14 Years Experience</span>
+<h1>Master SAT Math &amp; AP Calculus with a <em>University Professor.</em></h1>
+<p class="hero-sub">Elite 1-on-1 online tutoring designed to help high school students conquer complex math, score 5s on AP exams, and achieve top-tier SAT results.</p>
+<div class="hero-actions">
+<a class="btn-primary" href="#contact">📋 Schedule a Free Scholarship Test</a>
+<a class="btn-ghost" href="#methodology">See how it works →</a>
+</div>
+<div class="hero-stats">
+<div><span class="stat-num count-up" data-suffix="+" data-target="14">0</span><span class="stat-label">Years Teaching</span></div>
+<div><span class="stat-num">IIT</span><span class="stat-label">Kanpur Graduate</span></div>
+<div><span class="stat-num">800</span><span class="stat-label">SAT Math Target</span></div>
+</div>
+</div>
+<div class="hero-right">
+<div class="photo-wrap">
+<div class="photo-ring"></div>
+<div class="badge badge-iit">🎓 IIT Kanpur<br/>M.Tech</div>
+<img alt="Bhargav Academy Instructor" class="hero-photo" src="https://lh3.googleusercontent.com/aida/ADBb0uhN2sVAvrs7VGZsuVuVkotFBnVB4WQ0OroabBCVv1v2oWtd1t9NirazbFA4Ip8gjBH7saQ7hIIzF7F0LD727xRlVOgx59W32jfc88mE06vNqavIKrKCbViDXMegjmb9OlnBabxanM71y5QCGtZQ85oZfDT3zwwnxTBAx6HWvO-sd-I68H1Sbzsi_d6WIgdR27GgOc__LL-rMmicrHbbXY6ZYn_-3xRe7jC5a3y4Z40MwbgCcXaWaPHXiewC7V65brAqUnN-CNC5PA"/>
+<div class="badge badge-exp">14 Years<br/><span>Teaching Excellence</span></div>
+</div>
+</div>
+</section>
+<section class="about" id="about">
+<div class="container">
+<div class="about-grid">
+<div class="reveal-left">
+<div class="instructor-frame">
+<img alt="Bhargav Academy — Instructor" src="https://lh3.googleusercontent.com/aida/ADBb0uhN2sVAvrs7VGZsuVuVkotFBnVB4WQ0OroabBCVv1v2oWtd1t9NirazbFA4Ip8gjBH7saQ7hIIzF7F0LD727xRlVOgx59W32jfc88mE06vNqavIKrKCbViDXMegjmb9OlnBabxanM71y5QCGtZQ85oZfDT3zwwnxTBAx6HWvO-sd-I68H1Sbzsi_d6WIgdR27GgOc__LL-rMmicrHbbXY6ZYn_-3xRe7jC5a3y4Z40MwbgCcXaWaPHXiewC7V65brAqUnN-CNC5PA"/>
+<div class="frame-overlay"><small>Your Instructor</small>Bhargav Academy</div>
+</div>
+<div class="cred-strip">
+<div class="cred-row reveal d1"><span class="cred-icon">🎓</span><div><div class="cred-key">Qualification</div><div class="cred-val">M.Tech, IIT Kanpur</div></div></div>
+<div class="cred-row reveal d2"><span class="cred-icon">🔬</span><div><div class="cred-key">Specialization</div><div class="cred-val">Photonics Science &amp; Engineering</div></div></div>
+<div class="cred-row reveal d3"><span class="cred-icon">🏫</span><div><div class="cred-key">Experience</div><div class="cred-val">Assistant Professor · 14 Years</div></div></div>
+<div class="cred-row reveal d4"><span class="cred-icon">🌐</span><div><div class="cred-key">Sessions</div><div class="cred-val">100% Online via Google Meet / Zoom</div></div></div>
+</div>
+</div>
+<div class="reveal-right">
+<div class="section-label">Meet Your Instructor</div>
+<h2 class="section-title">University-Level Expertise,<br/>Tailored for <em style="font-style:italic;color:var(--gold)">High School Success.</em></h2>
+<p class="about-bio">With an M.Tech in Photonics Science and Engineering from IIT Kanpur — one of the world's most rigorous technology institutes — I bring 14 years of advanced teaching experience directly to your child's screen. Having served as an Assistant Professor for university undergraduates, I know exactly what top colleges expect. I specialize in breaking down high-level calculus and algebra concepts into clear, visual lessons built for high school students.</p>
+<div class="why-grid">
+<div class="why-card reveal d1"><div class="why-title">🧠 Deep Subject Mastery</div><div class="why-desc">14 years teaching everything from 8th-grade fundamentals to undergraduate engineering mathematics.</div></div>
+<div class="why-card reveal d2"><div class="why-title">🎯 Results-Oriented</div><div class="why-desc">Focused on SAT Math, AP Precalculus, AP Calculus AB &amp; BC — the exams that determine college admissions.</div></div>
+<div class="why-card reveal d3"><div class="why-title">📐 The "Why" Behind Math</div><div class="why-desc">Real engineering-grade understanding means I teach from first principles — not memorized shortcuts.</div></div>
+<div class="why-card reveal d4"><div class="why-title">🌟 Elite Academic Pedigree</div><div class="why-desc">An IIT Kanpur degree ranks among the most selective globally — comparable to MIT and Caltech.</div></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section class="methodology" id="methodology">
+<div class="meth-bg"></div>
+<div class="container" style="position:relative;z-index:2;">
+<div class="section-label" style="color:var(--gold);">The Methodology</div>
+<h2 class="section-title reveal">Active, Real-Time Learning —<br/>No Passive Screen Time.</h2>
+<p class="section-sub reveal d1">Online math tutoring only works when the instructor sees the student's thinking live. My 1-on-1 Google Meet / Zoom sessions mirror a traditional classroom experience.</p>
+<div class="method-grid">
+<div class="method-card reveal d1"><div class="method-num">01</div><div class="method-title">Live Scholarship Assessment</div><div class="method-desc">Every student begins with a comprehensive diagnostic to identify exact knowledge gaps — not a generic review. We build a custom roadmap from day one.</div><div class="method-tags"><span class="tag">Free · 45 min</span><span class="tag">Google Meet / Zoom</span></div></div>
+<div class="method-card reveal d2"><div class="method-num">02</div><div class="method-title">Visual Concept Mastery</div><div class="method-desc">I use Desmos graphing calculators and tablet annotations to bring abstract calculus concepts to life. Students see the math, not just the symbols.</div><div class="method-tags"><span class="tag">Desmos</span><span class="tag">Tablet + Stylus</span><span class="tag">Animations</span></div></div>
+<div class="method-card reveal d3"><div class="method-num">03</div><div class="method-title">Real-Time Problem Solving</div><div class="method-desc">Students work through equations live on their tablet. I watch every step — correcting missteps the moment they happen, not after the session ends.</div><div class="method-tags"><span class="tag">Required: Tablet + Stylus</span><span class="tag">Active Recall</span></div></div>
+<div class="method-card reveal d1"><div class="method-num">04</div><div class="method-title">Targeted Homework &amp; Practice</div><div class="method-desc">After every session, students receive comprehensive custom PDF notes and targeted assignments to reinforce the day's concepts.</div><div class="method-tags"><span class="tag">PDF Notes</span><span class="tag">Custom Assignments</span></div></div>
+<div class="method-card reveal d2"><div class="method-num">05</div><div class="method-title">Progress Tracking</div><div class="method-desc">Regular mini-assessments mirror actual SAT and AP exam conditions so students are never surprised on test day. Data-driven score tracking.</div><div class="method-tags"><span class="tag">Mock Tests</span><span class="tag">Score Analytics</span></div></div>
+<div class="method-card reveal d3"><div class="method-num">06</div><div class="method-title">YouTube Concept Library</div><div class="method-desc">Students access my YouTube library of concise concept videos they can re-watch between sessions to reinforce understanding on their own schedule.</div><div class="method-tags"><span class="tag">YouTube</span><span class="tag">On-Demand Review</span></div></div>
+</div>
+<div class="setup-box reveal">
+<span class="setup-icon">💻</span>
+<div class="setup-text"><h4>What Your Child Needs to Get Started</h4><p>A reliable internet connection, Google Meet / Zoom, and one essential piece of equipment that transforms passive watching into active mathematical thinking.</p></div>
+<div class="setup-reqs"><strong>Required Equipment</strong>Tablet &amp; Stylus (iPad / Android)<br/>Google Meet / Zoom<br/>Stable Internet</div>
+</div>
+</div>
+</section>
+<section class="fit" id="fit">
+<div class="container">
+<div class="fit-grid">
+<div>
+<div class="section-label reveal">Ideal Students</div>
+<h2 class="section-title reveal d1">Who I Work With</h2>
+<p class="section-sub reveal d2">I work with a small, curated group of students at a time to ensure each one receives my complete attention.</p>
+<ul class="fit-list">
+<li class="reveal d1"><div class="fit-bullet">01</div><div><div class="fit-item-title">SAT Math Strivers (Target: 750–800)</div><div class="fit-item-desc">Students who want to truly dominate the SAT Math section. We target the 750–800 band through conceptual depth, not test tricks.</div></div></li>
+<li class="reveal d2"><div class="fit-bullet">02</div><div><div class="fit-item-title">AP Exam Prep — Score a 5</div><div class="fit-item-desc">High schoolers enrolled in AP Precalculus, AP Calculus AB, or AP Calculus BC who are serious about earning a 5.</div></div></li>
+<li class="reveal d3"><div class="fit-bullet">03</div><div><div class="fit-item-title">Active Learners (Not Passive Viewers)</div><div class="fit-item-desc">Students equipped with a tablet and stylus who are ready to solve problems live during every session — not just watch lectures.</div></div></li>
+<li class="reveal d4"><div class="fit-bullet">04</div><div><div class="fit-item-title">Students Who Want the "Why"</div><div class="fit-item-desc">If your child wants to understand calculus at an engineering level — not just pass a test — this is the right environment for them.</div></div></li>
+</ul>
+</div>
+<div id="contact">
+<div class="cta-box reveal-right">
+<h3>Apply for Free Scholarship</h3>
+<p>No commitment. No pressure. A 45-minute session to identify exactly where your child stands and map the path to their target score.</p>
+<ul class="cta-steps">
+<li><span class="step-dot">1</span>Fill out the short form below</li>
+<li><span class="step-dot">2</span>Receive a confirmation with scheduling options</li>
+<li><span class="step-dot">3</span>Complete the 45-min free scholarship test via Google Meet / Zoom</li>
+<li><span class="step-dot">4</span>Receive a personalized score roadmap</li>
+</ul>
+<div class="form-block">
+<div class="form-group"><label class="form-label">Student's Name</label><input class="form-input" placeholder="e.g. Alex Johnson" type="text"/></div><div class="form-group"><label class="form-label">Student Email</label><input class="form-input" placeholder="student@email.com" type="email"/></div>
+<div class="form-group"><label class="form-label">Parent Email</label><input class="form-input" placeholder="parent@email.com" type="email"/></div>
+<div class="form-group" style="margin-bottom:0"><label class="form-label">Target Exam</label>
+<select class="form-input" style="background:rgba(20,40,75,0.9);">
+<option>SAT Math (Target: 750–800)</option>
+<option>AP Precalculus</option>
+<option>AP Calculus AB</option>
+<option>AP Calculus BC</option>
+</select>
+</div>
+</div>
+<a class="btn-primary" href="mailto:bhargavan86@gmail.com" style="display:block;text-align:center;justify-content:center;">Schedule My Free Scholarship Test →</a>
+<p class="form-note">No credit card. No commitment. Completely free 45-minute session.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section class="testimonials" id="testimonials">
+<div class="container">
+<div class="section-label reveal">Verified Student Results</div>
+<h2 class="section-title reveal d1">Real Students. Real Outcomes.</h2>
+<p class="section-sub reveal d2">From elite IITs to top research institutes — hear from students whose careers were shaped by this mentorship.</p>
+<div class="testi-grid testi-grid-4">
+<a class="testi-card reveal d1" href="https://www.linkedin.com/in/harshita-harshi-9377891bb/" rel="noopener noreferrer" target="_blank">
+<div class="testi-linkedin-badge">View on LinkedIn ↗</div>
+<span class="quote-mark">"</span>
+<p class="testi-text">Mr. Bhargav taught me advanced mathematics, including Probability and Statistics. What stood out most was his strategic approach: <em>"On the day of the exam, you have to deal with questions under pressure. So, practice exactly that. Nothing else matters."</em> His emphasis on rigorous, timed practice tests completely changed my trajectory.</p>
+<div class="testi-footer">
+<div class="avatar">HH</div>
+<div><div class="testi-name">Harshita Harshi</div><div class="testi-role">M.Tech · IIT (BHU) Varanasi</div></div>
+<span class="score-pill">Elite Admit ★</span>
+</div>
+</a>
+<a class="testi-card reveal d2" href="https://www.linkedin.com/in/vishaltande/" rel="noopener noreferrer" target="_blank">
+<div class="testi-linkedin-badge">View on LinkedIn ↗</div>
+<span class="quote-mark">"</span>
+<p class="testi-text">He has a remarkable ability to distill complex concepts into clear, intuitive ideas while maintaining a sense of curiosity in the learning process. What truly distinguishes him is his role beyond the classroom — he guided me through a highly competitive university admission journey with patience and insight.</p>
+<div class="testi-footer">
+<div class="avatar">VT</div>
+<div><div class="testi-name">Vishal Tande</div><div class="testi-role">M.Tech · IIT Guwahati | Biomedical Engg.</div></div>
+<span class="score-pill">IIT Guwahati ★</span>
+</div>
+</a>
+<a class="testi-card reveal d3" href="https://www.linkedin.com/in/nibha-ranjan-b0370524a/" rel="noopener noreferrer" target="_blank">
+<div class="testi-linkedin-badge">View on LinkedIn ↗</div>
+<span class="quote-mark">"</span>
+<p class="testi-text">He didn't just teach us mathematics; he instilled the discipline, confidence, and courage required to aim for the very best. Today, as an engineer at a major multinational corporation, I realize this journey wouldn't have been possible without his belief in his students.</p>
+<div class="testi-footer">
+<div class="avatar">NR</div>
+<div><div class="testi-name">Nibha Ranjan</div><div class="testi-role">M.Tech · IIT Guwahati | Mahindra &amp; Mahindra</div></div>
+<span class="score-pill">MNC Engineer ★</span>
+</div>
+</a>
+<a class="testi-card reveal d4" href="https://www.linkedin.com/in/yogeshsahu21july/" rel="noopener noreferrer" target="_blank">
+<div class="testi-linkedin-badge">View on LinkedIn ↗</div>
+<span class="quote-mark">"</span>
+<p class="testi-text">His approach goes far beyond rote memorization; he teaches you how to truly think through a problem from first principles. The rigorous academic standards and fundamental clarity I developed under his mentorship were instrumental in my journey to becoming a researcher at one of the world's premier science institutes.</p>
+<div class="testi-footer">
+<div class="avatar">YS</div>
+<div><div class="testi-name">Yogesh Sahu</div><div class="testi-role">Ph.D. Scholar · Nano Science, IISc Bangalore</div></div>
+<span class="score-pill">IISc Bangalore ★</span>
+</div>
+</a>
+</div>
+</div>
+</section>
+<section class="faq" id="faq">
+<div class="container">
+<div class="section-label reveal">Common Questions</div>
+<h2 class="section-title reveal d1">Frequently Asked Questions</h2>
+<div class="faq-grid">
+<div class="faq-item reveal d1"><div class="faq-q">Do you teach students outside India? <span class="faq-icon">+</span></div><div class="faq-a">Yes — all sessions are online via Google Meet / Zoom, fully accessible to students in the US, Canada, UK, Middle East, and worldwide. Time zones are accommodated.</div></div>
+<div class="faq-item reveal d2"><div class="faq-q">What does a typical session look like? <span class="faq-icon">+</span></div><div class="faq-a">45-minute, 1-on-1 sessions via Google Meet / Zoom. Students solve problems live on their tablet. I watch every step, correct in real-time, and send PDF notes after.</div></div>
+<div class="faq-item reveal d3"><div class="faq-q">What is the free scholarship test? <span class="faq-icon">+</span></div><div class="faq-a">A complimentary 45-minute session to assess your child's level, identify knowledge gaps, and build a personalized roadmap to their target score. Zero cost, zero commitment.</div></div>
+<div class="faq-item reveal d1"><div class="faq-q">Does my child need a tablet? <span class="faq-icon">+</span></div><div class="faq-a">Yes — a tablet and stylus (iPad with Apple Pencil works perfectly) are required. I need to see your child's thought process in real-time to provide effective feedback.</div></div>
+<div class="faq-item reveal d2"><div class="faq-q">How quickly can we expect score improvement? <span class="faq-icon">+</span></div><div class="faq-a">Most students see measurable improvement within 6–8 sessions. Significant jumps (100+ points on SAT Math) typically happen over 3–4 months of consistent sessions.</div></div>
+<div class="faq-item reveal d3"><div class="faq-q">What is the free scholarship test? <span class="faq-icon">+</span></div><div class="faq-a">A complimentary 45-minute session to assess your child's level, identify knowledge gaps, and build a personalized roadmap to their target score. Zero cost, zero commitment.</div></div>
+</div>
+</div>
+</section>
+<section class="final-cta">
+<div class="final-cta-glow"></div>
+<div class="container" style="position:relative;z-index:2;">
+<h2 class="reveal">Your Child's Target Score<br/>Starts with a <em>Free Scholarship Test.</em></h2>
+<p class="reveal d1">No obligation. Just 45 minutes to discover exactly what's holding your child back — and the precise roadmap to fix it.</p>
+<a class="btn-primary reveal d2" href="#contact" style="display:inline-flex;">📋 Schedule the Free Scholarship Test</a>
+<div class="contact-strip reveal d3">
+<a class="contact-item" href="tel:+918074474524"><span>📞</span> +91 8074 474 524</a>
+<a class="contact-item" href="mailto:bhargavan86@gmail.com"><span>✉️</span> bhargavan86@gmail.com</a>
+<a class="contact-item" href="https://www.youtube.com/channel/UCxuloDzQT6a2TCt1dY2kLfg" target="_blank"><span>▶</span> YouTube Channel</a>
+</div>
+</div>
+</section>
+<footer>
+<div class="footer-logo">Bhargav <span>Academy</span></div>
+<div class="footer-copy">© 2026 Bhargav Academy · All Rights Reserved · Hyderabad, India</div>
+<div class="footer-links">
+<a href="#about">About</a>
+<a href="#methodology">Methodology</a>
+<a href="#contact">Contact</a>
+<a href="#">↑ Back to top</a>
+</div>
+</footer>
+<script>
+(function(){const c=document.getElementById('particles');for(let i=0;i<18;i++){const p=document.createElement('div');p.className='particle';const tx=(Math.random()-.5)*220;p.style.cssText=`left:${Math.random()*100}%;bottom:0;width:${Math.random()*2+1}px;height:${Math.random()*2+1}px;--tx:${tx}px;animation-duration:${Math.random()*12+10}s;animation-delay:${Math.random()*10}s;`;c.appendChild(p);}})();
+(function(){const symbols=['∫','√','Σ','π','∞','∂','∇','Δ','∝','≈','≤','≥'];const c=document.getElementById('mathFloat');symbols.forEach(sym=>{const s=document.createElement('span');s.textContent=sym;const size=Math.random()*2.5+1.5;s.style.cssText=`left:${Math.random()*90}%;top:${Math.random()*80}%;font-size:${size}rem;animation-duration:${Math.random()*8+12}s;animation-delay:${Math.random()*8}s;`;c.appendChild(s);});})();
+window.addEventListener('scroll',()=>{document.getElementById('mainNav').classList.toggle('scrolled',window.scrollY>60);},{passive:true});
+const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');});},{threshold:.12,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.reveal,.reveal-left,.reveal-right').forEach(el=>obs.observe(el));
+function countUp(el){const target=parseInt(el.dataset.target);const suffix=el.dataset.suffix||'';const dur=1800;const start=performance.now();const tick=now=>{const t=Math.min((now-start)/dur,1);const ease=1-Math.pow(1-t,3);el.textContent=Math.round(ease*target)+suffix;if(t<1)requestAnimationFrame(tick);};requestAnimationFrame(tick);}
+const countObs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){countUp(e.target);countObs.unobserve(e.target);}});},{threshold:.5});
+document.querySelectorAll('.count-up').forEach(el=>countObs.observe(el));
+</script>
+</body></html>
