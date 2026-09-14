@@ -297,7 +297,7 @@ export function StudentDirectory({
               value={`${studentsPath()}?view=${view}`}
             />
             <div className="min-w-48 space-y-1.5">
-              <Label htmlFor="bulk-batch">Enrol in</Label>
+              <Label htmlFor="bulk-batch">Enroll in</Label>
               <select
                 id="bulk-batch"
                 name="batchId"
@@ -316,7 +316,7 @@ export function StudentDirectory({
               </select>
             </div>
             <Button type="submit" size="lg">
-              Enrol
+              Enroll
             </Button>
           </form>
           <form action={deleteDirectoryStudents}>

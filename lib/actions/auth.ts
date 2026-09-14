@@ -15,6 +15,7 @@ import {
   requireTeacher,
 } from "@/lib/auth";
 import { db, ensureDatabase } from "@/lib/db";
+import { flash } from "@/lib/flash";
 import { validateChangedPassword } from "@/lib/identity";
 import { parents, students, teachers } from "@/lib/schema";
 
@@ -250,4 +251,42 @@ export async function setParentPassword(
     .where(eq(parents.id, parent.id));
 
   redirect("/parent");
+}
+
+export async function changeTeacherPassword(
+  _prev: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const teacher = await requireTeacher();
+  const parsed = await readNewPassword(formData);
+  if ("error" in parsed) return parsed;
+
+  if (!(await compare(parsed.currentPassword, teacher.passwordHash))) {
+    return { error: "Current password is incorrect." };
+  }
+
+  await db
+    .update(teachers)
+    .set({ passwordHash: await hash(parsed.password, 10), mustChangePassword: false })
+    .where(eq(teachers.id, teacher.id));
+
+  await flash("Password changed", { description: "Use it the next time you sign in." });
+  redirect("/dashboard/settings?section=account");
+}
+
+export async function updateTeacherName(
+  _prev: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const teacher = await requireTeacher();
+  const name = String(formData.get("name") ?? "").trim();
+  if (name.length < 2) {
+    return { error: "Please enter your full name." };
+  }
+
+  await db.update(teachers).set({ name }).where(eq(teachers.id, teacher.id));
+  // The session carries the name shown in the sidebar, so refresh it.
+  await createSession({ id: teacher.id, name, email: teacher.email });
+  await flash("Name updated");
+  redirect("/dashboard/settings?section=account");
 }

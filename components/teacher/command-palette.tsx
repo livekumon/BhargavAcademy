@@ -57,7 +57,7 @@ export function CommandPalette({ index }: { index: PaletteIndex }) {
   const entries = useMemo<Entry[]>(
     () => [
       { id: "new-batch", group: "Actions", label: "Create a batch", href: "/dashboard/batches/new", icon: Plus, keywords: "new batch add" },
-      { id: "new-student", group: "Actions", label: "Add a student", href: "/dashboard/students/new", icon: Plus, keywords: "new student enrol enroll" },
+      { id: "new-student", group: "Actions", label: "Add a student", href: "/dashboard/students/new", icon: Plus, keywords: "new student enroll admission" },
       { id: "new-parent", group: "Actions", label: "Create a parent login", href: "/dashboard/parents/new", icon: Plus, keywords: "new parent login" },
       { id: "new-course", group: "Actions", label: "Create a course", href: "/dashboard/courses/new", icon: Plus, keywords: "new course library" },
       ...index.batches.map((batch) => ({

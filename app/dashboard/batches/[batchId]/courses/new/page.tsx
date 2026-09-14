@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { AttachCourseForm } from "@/components/attach-course-form";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormPage } from "@/components/teacher/form-page";
 import { attachCourseToBatch } from "@/lib/actions/courses";
 import { requireTeacher } from "@/lib/auth";
 import { batchPath } from "@/lib/paths";
@@ -32,17 +32,11 @@ export default async function AttachCoursePage({
   const availableCourses = await getUnattachedCourses(teacher.id, batch.id);
 
   return (
-    <Card className="mx-auto max-w-2xl">
-      <CardHeader>
-        <CardTitle className="font-heading text-3xl">
-          Choose a course
-        </CardTitle>
-        <CardDescription>
-          A batch can only have one course. After you attach it, you upload
-          material from the batch.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <FormPage
+      crumbs={[{ label: "Batches", href: "/dashboard/batches" }, { label: batch.name, href: `/dashboard/batches/${batch.id}` }, { label: "Choose a course" }]}
+      title={<>Choose a course</>}
+      description={<>A batch can only have one course. After you attach it, you upload material from the batch.</>}
+    >
         {availableCourses.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             Every course is already used, or your library is empty. Create a
@@ -55,7 +49,6 @@ export default async function AttachCoursePage({
             cancelHref={batchPath(batch.id)}
           />
         )}
-      </CardContent>
-    </Card>
+      </FormPage>
   );
 }

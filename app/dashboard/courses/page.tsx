@@ -1,83 +1,88 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BookMarked, Plus } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatusPill } from "@/components/ui/status-pill";
 import { requireTeacher } from "@/lib/auth";
 import { libraryCoursePath } from "@/lib/paths";
-import { getTeacherCourses } from "@/lib/queries";
+import { getTeacherBatches, getTeacherCourses } from "@/lib/queries";
+import { plural } from "@/lib/teacher-format";
 
 export const metadata: Metadata = {
-  title: "Courses",
+  title: "Course library",
 };
 
-export default async function CoursesLibraryPage() {
+export default async function CourseLibraryPage() {
   const teacher = await requireTeacher();
-  const courseList = await getTeacherCourses(teacher.id);
+  const [courses, batches] = await Promise.all([getTeacherCourses(teacher.id), getTeacherBatches(teacher.id)]);
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-primary">Shared library</p>
-          <h1 className="font-heading mt-1 text-4xl font-semibold tracking-tight">
-            Your courses
-          </h1>
-          <p className="mt-2 max-w-2xl text-muted-foreground">
-            Chapters stay the same everywhere. Attach a course to a batch, then
-            upload PDFs that belong only to that batch.
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/dashboard/courses/new">
-            <Plus data-icon="inline-start" />
-            New course
-          </Link>
-        </Button>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        eyebrow="Teach"
+        title="Course library"
+        description="Write a course's chapters once and share it with any number of batches. Each batch still gets its own PDFs."
+        actions={
+          <Button asChild size="lg">
+            <Link href="/dashboard/courses/new">
+              <Plus data-icon="inline-start" />
+              New course
+            </Link>
+          </Button>
+        }
+      />
 
-      {courseList.length === 0 ? (
-        <Card className="items-center py-16 text-center">
-          <CardHeader className="items-center">
-            <div className="mb-2 flex size-12 items-center justify-center rounded-2xl bg-secondary text-primary">
-              <BookMarked className="size-5" />
-            </div>
-            <CardTitle className="font-heading text-2xl">No courses yet</CardTitle>
-            <CardDescription className="max-w-md">
-              Create a shared course, add chapters, then attach it to one or more
-              batches.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild>
+      {courses.length === 0 ? (
+        <EmptyState
+          icon={<BookMarked />}
+          title="No courses yet"
+          description="Create a course, add its chapters, then attach it to a batch."
+          action={
+            <Button asChild size="lg">
               <Link href="/dashboard/courses/new">Create your first course</Link>
             </Button>
-          </CardContent>
-        </Card>
+          }
+        />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {courseList.map((course) => (
-            <Link key={course.id} href={libraryCoursePath(course.id)}>
-              <Card className="h-full transition-shadow hover:shadow-md">
-                <CardHeader>
+        <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {courses.map((course, index) => {
+            const usedBy = batches.filter((batch) => batch.course?.id === course.id);
+            return (
+              <li key={course.id} className="animate-rise" style={{ animationDelay: `${index * 50}ms` }}>
+                <Link
+                  href={libraryCoursePath(course.id)}
+                  className="group flex h-full flex-col gap-4 rounded-xl bg-surface p-5 ring-1 ring-line transition-[box-shadow,transform] duration-(--dur-base) ease-out-quart hover:-translate-y-0.5 hover:shadow-elevation-md focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none sm:p-6"
+                >
                   <div className="flex items-start justify-between gap-3">
-                    <CardTitle className="font-heading text-2xl">
-                      {course.title}
-                    </CardTitle>
-                    <Badge variant="secondary">
-                      {course.chapterCount}{" "}
-                      {course.chapterCount === 1 ? "chapter" : "chapters"}
-                    </Badge>
+                    <span className="flex size-10 items-center justify-center rounded-lg bg-brand-subtle text-brand-subtle-fg">
+                      <BookMarked aria-hidden="true" className="size-5" />
+                    </span>
+                    <StatusPill tone={course.chapterCount === 0 ? "warning" : "neutral"}>
+                      {course.chapterCount === 0 ? "No chapters" : plural(course.chapterCount, "chapter")}
+                    </StatusPill>
                   </div>
-                  <CardDescription className="line-clamp-3">
-                    {course.description || "No description yet."}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
-          ))}
-        </div>
+                  <div className="min-w-0">
+                    <h2 className="font-heading text-title-2 font-semibold group-hover:underline">{course.title}</h2>
+                    <p className="mt-1 line-clamp-2 text-sm text-content-muted">
+                      {course.description || "No description yet."}
+                    </p>
+                  </div>
+                  <p className="mt-auto border-t border-line pt-3 text-sm text-content-muted">
+                    {usedBy.length === 0 ? (
+                      <span className="text-content-subtle">Not used by a batch yet</span>
+                    ) : (
+                      <>
+                        Used by <span className="font-medium text-content">{usedBy.map((batch) => batch.name).join(", ")}</span>
+                      </>
+                    )}
+                  </p>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   );

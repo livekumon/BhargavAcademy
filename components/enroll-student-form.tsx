@@ -47,7 +47,7 @@ export function EnrollStudentForm({
         </select>
       </div>
       <Button type="submit" size="lg" disabled={pending}>
-        {pending ? "Enrolling…" : "Enrol"}
+        {pending ? "Enrolling…" : "Enroll"}
       </Button>
       {state.error ? (
         <p role="alert" className="w-full text-sm text-danger">{state.error}</p>

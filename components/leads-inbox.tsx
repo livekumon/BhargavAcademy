@@ -45,7 +45,7 @@ export function LeadsInbox({ leads, status }: { leads: LeadRecord[]; status: Lea
       <EmptyState
         icon={<Inbox />}
         title="No enquiries yet"
-        description="When a parent submits the enrol form on bhargavacademy.com, it lands here so you can call them back."
+        description="When a parent submits the enroll form on bhargavacademy.com, it lands here so you can call them back."
       />
     );
   }

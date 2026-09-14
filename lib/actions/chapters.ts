@@ -1,7 +1,7 @@
 "use server";
 
 import { flash } from "@/lib/flash";
-import { and, eq, max } from "drizzle-orm";
+import { and, asc, eq, max } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { requireTeacher } from "@/lib/auth";
@@ -615,4 +615,33 @@ export async function deleteLibraryChapter(courseId: string, chapterId: string) 
   await deleteSharedChapter(courseId, chapterId);
   await flash("Chapter deleted");
   redirect(libraryCoursePath(courseId));
+}
+
+/** Swap a chapter with its neighbour. Order is shared by every batch using the course. */
+export async function moveLibraryChapter(courseId: string, chapterId: string, direction: "up" | "down") {
+  const teacher = await requireTeacher();
+  await ensureDatabase();
+
+  const course = await getOwnedCourseForTeacher(teacher.id, courseId);
+  if (!course) return;
+
+  const ordered = await db
+    .select({ id: chapters.id, position: chapters.position })
+    .from(chapters)
+    .where(eq(chapters.courseId, courseId))
+    .orderBy(asc(chapters.position), asc(chapters.createdAt));
+
+  const index = ordered.findIndex((chapter) => chapter.id === chapterId);
+  const swapWith = direction === "up" ? index - 1 : index + 1;
+  if (index < 0 || swapWith < 0 || swapWith >= ordered.length) return;
+
+  // Rewrite positions densely so legacy duplicates can't block a swap.
+  const next = [...ordered];
+  [next[index], next[swapWith]] = [next[swapWith], next[index]];
+  for (const [position, chapter] of next.entries()) {
+    await db.update(chapters).set({ position: position + 1 }).where(eq(chapters.id, chapter.id));
+  }
+
+  revalidatePath(libraryCoursePath(courseId));
+  revalidatePath("/dashboard", "layout");
 }

@@ -24,7 +24,7 @@ export default async function BatchesPage() {
         title="Batches"
         description={
           batches.length > 0
-            ? `${batches.length} ${batches.length === 1 ? "batch" : "batches"} · ${students} enrolments. Each batch has one course and its own PDFs.`
+            ? `${batches.length} ${batches.length === 1 ? "batch" : "batches"} · ${students} enrollments. Each batch has one course and its own PDFs.`
             : "Each batch has one course and its own PDFs."
         }
         actions={
@@ -41,7 +41,7 @@ export default async function BatchesPage() {
         <EmptyState
           icon={<Users />}
           title="No batches yet"
-          description="Create a batch with a course. You can enrol students now or after you start uploading material."
+          description="Create a batch with a course. You can enroll students now or after you start uploading material."
           action={
             <Button asChild size="lg">
               <Link href="/dashboard/batches/new">Create your first batch</Link>

@@ -37,8 +37,8 @@ export default async function StudentsPage({
         title="Students"
         description={
           studentList.length > 0
-            ? `${studentList.length} ${studentList.length === 1 ? "student" : "students"} across ${batchList.length} ${batchList.length === 1 ? "batch" : "batches"}. Select several to enrol them together.`
-            : "Add a student once, then enrol them in as many batches as they need."
+            ? `${studentList.length} ${studentList.length === 1 ? "student" : "students"} across ${batchList.length} ${batchList.length === 1 ? "batch" : "batches"}. Select several to enroll them together.`
+            : "Add a student once, then enroll them in as many batches as they need."
         }
         actions={
           <Button asChild size="lg">

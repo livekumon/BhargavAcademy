@@ -28,8 +28,8 @@ export default async function LeadsPage({
         title="Leads"
         description={
           fresh > 0
-            ? `${fresh} ${fresh === 1 ? "family is" : "families are"} waiting for a call back. Enquiries from the enrol form on bhargavacademy.com land here.`
-            : "Enquiries from the enrol form on bhargavacademy.com land here."
+            ? `${fresh} ${fresh === 1 ? "family is" : "families are"} waiting for a call back. Enquiries from the enroll form on bhargavacademy.com land here.`
+            : "Enquiries from the enroll form on bhargavacademy.com land here."
         }
       />
       <LeadsInbox leads={leads} status={status} />

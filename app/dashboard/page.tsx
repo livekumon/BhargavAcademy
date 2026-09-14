@@ -75,7 +75,7 @@ export default async function TodayPage() {
         </h1>
         <p className="max-w-3xl text-lead text-content-muted text-pretty">
           {needsSetup
-            ? "Let's get your academy set up. Four short steps and your students can start revising."
+            ? "Let's get your academy set up. A few short steps and your students can start revising."
             : summary.length > 0
               ? `${summary.join(", ")}.`
               : "Everything is quiet. Every student is caught up and there are no new leads."}

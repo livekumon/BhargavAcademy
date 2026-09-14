@@ -116,7 +116,7 @@ export function StudentForm({
           />
         </Field>
         {batches && batches.length > 0 ? (
-          <Field id="batchId" label="First batch" hint="You can enrol them in more batches from their profile.">
+          <Field id="batchId" label="First batch" hint="You can enroll them in more batches from their profile.">
             <select id="batchId" name="batchId" required className={selectClass} defaultValue={defaultBatchId ?? ""}>
               <option value="" disabled>
                 Choose a batch
