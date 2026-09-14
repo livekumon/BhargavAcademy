@@ -22,9 +22,12 @@ const OPTIONS: { value: MaterialKind; title: string; description: string }[] = [
 export function MaterialKindFields({
   defaultKind = "class_material",
   defaultInstructions = "",
+  defaultDueAt = "",
 }: {
   defaultKind?: MaterialKind;
   defaultInstructions?: string;
+  /** YYYY-MM-DD, or empty for no due date. */
+  defaultDueAt?: string;
 }) {
   const [kind, setKind] = useState<MaterialKind>(defaultKind);
 
@@ -77,9 +80,23 @@ export function MaterialKindFields({
           <p className="text-xs text-content-muted">
             Students see these instructions separately from class material.
           </p>
+          <div className="max-w-56 space-y-2 pt-2">
+            <Label htmlFor="dueAt">Due date (optional)</Label>
+            <input
+              id="dueAt"
+              name="dueAt"
+              type="date"
+              defaultValue={defaultDueAt}
+              className="h-10 w-full rounded-lg border border-input bg-raised px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            />
+            <p className="text-xs text-content-muted">Late work is flagged for you and the parent.</p>
+          </div>
         </div>
       ) : (
-        <input type="hidden" name="instructions" value="" />
+        <>
+          <input type="hidden" name="instructions" value="" />
+          <input type="hidden" name="dueAt" value="" />
+        </>
       )}
     </div>
   );

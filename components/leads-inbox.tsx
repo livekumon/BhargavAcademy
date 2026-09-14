@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { CheckCheck, GraduationCap, Inbox, MessageCircle, Phone, RotateCcw, UserPlus } from "lucide-react";
+import { CheckCheck, GraduationCap, Inbox, MessageCircle, NotebookPen, Phone, RotateCcw, UserPlus } from "lucide-react";
 import { FilterChips } from "@/components/teacher/page-tabs";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Surface } from "@/components/ui/surface";
-import { setLeadStatus } from "@/lib/actions/leads";
+import { saveLeadNotes, setLeadStatus } from "@/lib/actions/leads";
 import { LEAD_STATUS_LABEL, type LeadRecord, type LeadStatus } from "@/lib/leads";
 import { relativeDay, whatsappNumber } from "@/lib/teacher-format";
 
@@ -112,6 +112,36 @@ export function LeadsInbox({ leads, status }: { leads: LeadRecord[]; status: Lea
                     </span>
                     <span className="tabular text-content-muted">{lead.phone}</span>
                   </div>
+
+                  <details className="group rounded-lg ring-1 ring-line">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <NotebookPen aria-hidden="true" className="size-4 shrink-0 text-content-subtle" />
+                        <span className="truncate text-content-muted">
+                          {lead.notes ? lead.notes.split("\n")[0] : "Add a note from your call"}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-xs text-content-subtle group-open:hidden">{lead.notes ? "Edit" : "Add"}</span>
+                    </summary>
+                    <form action={saveLeadNotes} className="space-y-2 border-t border-line p-3">
+                      <input type="hidden" name="id" value={lead.id} />
+                      <label htmlFor={`notes-${lead.id}`} className="sr-only">
+                        Notes about {lead.studentName}
+                      </label>
+                      <textarea
+                        id={`notes-${lead.id}`}
+                        name="notes"
+                        defaultValue={lead.notes}
+                        rows={3}
+                        maxLength={2000}
+                        placeholder="Called on Monday. Wants the evening batch; visiting on Saturday."
+                        className="w-full rounded-lg border border-input bg-raised px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                      />
+                      <Button type="submit" size="default" variant="outline">
+                        Save note
+                      </Button>
+                    </form>
+                  </details>
 
                   {lead.message ? (
                     <p className="rounded-lg bg-sunken px-3 py-2 text-sm text-content-muted text-pretty">

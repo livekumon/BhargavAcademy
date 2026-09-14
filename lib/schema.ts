@@ -92,6 +92,7 @@ export const chapterMaterials = sqliteTable("chapter_materials", {
   pdfOriginalName: text("pdf_original_name"),
   kind: text("kind").notNull().default("class_material"),
   instructions: text("instructions").notNull().default(""),
+  dueAt: integer("due_at", { mode: "timestamp" }),
   position: integer("position").notNull().default(0),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
@@ -216,6 +217,7 @@ export const leads = sqliteTable("leads", {
   subjects: text("subjects").notNull().default(""),
   message: text("message").notNull().default(""),
   status: text("status").notNull().default("new"),
+  notes: text("notes").notNull().default(""),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 

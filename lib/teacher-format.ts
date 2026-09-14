@@ -92,3 +92,20 @@ export function whatsappNumber(phone: string) {
   const digits = phone.replace(/\D/g, "");
   return digits.length === 10 ? `91${digits}` : digits;
 }
+
+/** A stored due date as YYYY-MM-DD in India time, for a date input. */
+export function dueDateInput(date: Date | null | undefined) {
+  return date ? dayKey(date) : "";
+}
+
+export type DueState = { tone: "danger" | "warning" | "neutral"; label: string };
+
+/** "Overdue by 2 days", "Due today", "Due 20 Sept" — only for work that isn't finished. */
+export function dueState(dueAt: Date | null | undefined, now = new Date()): DueState | null {
+  if (!dueAt) return null;
+  const days = daysAgo(dueAt, now);
+  if (days > 0) return { tone: "danger", label: days === 1 ? "Overdue by a day" : `Overdue by ${days} days` };
+  if (days === 0) return { tone: "warning", label: "Due today" };
+  if (days === -1) return { tone: "warning", label: "Due tomorrow" };
+  return { tone: "neutral", label: `Due ${shortDate(dueAt, now)}` };
+}

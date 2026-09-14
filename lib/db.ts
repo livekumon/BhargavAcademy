@@ -65,6 +65,7 @@ export async function ensureDatabase() {
   await ensureLookupSchema();
   await ensureLeadsSchema();
   await ensureMustChangePasswordSchema();
+  await ensureTeacherPortalSchema();
 }
 
 async function initializeDatabase() {
@@ -1348,4 +1349,25 @@ async function migrateDemoIdentities() {
         .where(eq(schema.parents.id, current.id));
     }
   }
+}
+
+let teacherPortalSchemaReady = false;
+
+/** Lead notes and assignment due dates, added with the teacher portal redesign. */
+async function ensureTeacherPortalSchema() {
+  if (teacherPortalSchemaReady) return;
+
+  const materialColumns = (await client.execute("PRAGMA table_info(chapter_materials)")).rows.map((row) =>
+    String(row.name),
+  );
+  if (!materialColumns.includes("due_at")) {
+    await client.execute("ALTER TABLE chapter_materials ADD COLUMN due_at INTEGER");
+  }
+
+  const leadColumns = (await client.execute("PRAGMA table_info(leads)")).rows.map((row) => String(row.name));
+  if (!leadColumns.includes("notes")) {
+    await client.execute("ALTER TABLE leads ADD COLUMN notes TEXT NOT NULL DEFAULT ''");
+  }
+
+  teacherPortalSchemaReady = true;
 }

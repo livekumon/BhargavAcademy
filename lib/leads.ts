@@ -28,6 +28,7 @@ export type LeadRecord = {
   subjects: string;
   message: string;
   status: LeadStatus;
+  notes: string;
   createdAt: string;
 };
 
@@ -50,6 +51,7 @@ function toRecord(lead: Lead): LeadRecord {
     subjects: lead.subjects,
     message: lead.message,
     status: asLeadStatus(lead.status),
+    notes: lead.notes ?? "",
     createdAt:
       lead.createdAt instanceof Date
         ? lead.createdAt.toISOString()
@@ -79,6 +81,7 @@ function parseStoredLead(value: unknown): LeadRecord | null {
     subjects: typeof row.subjects === "string" ? row.subjects : "",
     message: typeof row.message === "string" ? row.message : "",
     status: asLeadStatus(row.status),
+    notes: typeof row.notes === "string" ? row.notes : "",
     createdAt:
       typeof row.createdAt === "string"
         ? row.createdAt
@@ -97,6 +100,7 @@ export async function createLead(input: LeadInput): Promise<LeadRecord> {
     subjects: input.subjects,
     message: input.message,
     status: "new",
+    notes: "",
     createdAt: new Date().toISOString(),
   };
 
@@ -133,34 +137,35 @@ export async function listLeads(): Promise<LeadRecord[]> {
   return rows.map(toRecord);
 }
 
-export async function updateLeadStatus(id: string, status: LeadStatus) {
+async function findLead(id: string) {
   await ensureDatabase();
-  const [existing] = await db
-    .select()
-    .from(leads)
-    .where(eq(leads.id, id))
-    .limit(1);
-
+  const [existing] = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
   let record: LeadRecord | null = existing ? toRecord(existing) : null;
-
   if (!record && isGcsConfigured()) {
     const stored = await listLeads();
     record = stored.find((lead) => lead.id === id) ?? null;
   }
-
   if (!record) {
     throw new Error("Lead not found.");
   }
+  return record;
+}
 
-  const next = { ...record, status };
-  await db
-    .update(leads)
-    .set({ status })
-    .where(eq(leads.id, id));
-
+/** Updates the local row and, when configured, the durable copy in Cloud Storage. */
+async function saveLead(next: LeadRecord) {
+  await db.update(leads).set({ status: next.status, notes: next.notes }).where(eq(leads.id, next.id));
   if (isGcsConfigured()) {
-    await saveLeadJsonToGcs(id, next);
+    await saveLeadJsonToGcs(next.id, next);
   }
-
   return next;
+}
+
+export async function updateLeadStatus(id: string, status: LeadStatus) {
+  const record = await findLead(id);
+  return saveLead({ ...record, status });
+}
+
+export async function updateLeadNotes(id: string, notes: string) {
+  const record = await findLead(id);
+  return saveLead({ ...record, notes: notes.slice(0, 2000) });
 }

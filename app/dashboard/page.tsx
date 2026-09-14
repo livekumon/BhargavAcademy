@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
+  AlarmClock,
   ArrowRight,
   Award,
   BookOpenCheck,
@@ -27,6 +28,7 @@ import { getTeacherCourses, getTeacherParents, getTeacherStudents } from "@/lib/
 import {
   daysAgo,
   daysBefore,
+  dueState,
   firstName,
   formatScore,
   greeting,
@@ -35,7 +37,12 @@ import {
   plural,
   relativeDay,
 } from "@/lib/teacher-format";
-import { getTeacherRecentMarks, getTeacherRecentWork, type RecentWork } from "@/lib/teacher-queries";
+import {
+  getTeacherOverdueAssignments,
+  getTeacherRecentMarks,
+  getTeacherRecentWork,
+  type RecentWork,
+} from "@/lib/teacher-queries";
 
 export const metadata: Metadata = {
   title: "Today",
@@ -44,7 +51,7 @@ export const metadata: Metadata = {
 export default async function TodayPage() {
   const teacher = await requireTeacher();
   const since = daysBefore(7);
-  const [batches, recent, marks, leads, parents, courses, students] = await Promise.all([
+  const [batches, recent, marks, leads, parents, courses, students, overdue] = await Promise.all([
     getBatchOverviews(teacher.id),
     getTeacherRecentWork(teacher.id, 40),
     getTeacherRecentMarks(teacher.id, since),
@@ -52,6 +59,7 @@ export default async function TodayPage() {
     getTeacherParents(teacher.id),
     getTeacherCourses(teacher.id),
     getTeacherStudents(teacher.id),
+    getTeacherOverdueAssignments(teacher.id),
   ]);
 
   const submissions = recent.filter((item) => item.type === "submitted" && item.at >= since);
@@ -60,7 +68,9 @@ export default async function TodayPage() {
   const pendingParents = parents.filter((parent) => parent.mustChangePassword);
   const needsSetup = batches.length === 0 || students.length === 0;
 
+  const lateStudents = overdue.reduce((total, item) => total + item.lateStudents, 0);
   const summary = [
+    lateStudents > 0 ? `${plural(lateStudents, "late assignment")} to chase` : null,
     submissions.length > 0 ? plural(submissions.length, "new submission") + " this week" : null,
     behind > 0 ? `${plural(behind, "student")} behind across your batches` : null,
     newLeads.length > 0 ? plural(newLeads.length, "new lead") : null,
@@ -133,7 +143,7 @@ export default async function TodayPage() {
         </div>
       )}
 
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-8">
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-8">
         <section aria-labelledby="batches-heading" className="space-y-4">
           <div className="flex items-baseline justify-between gap-3">
             <h2 id="batches-heading" className="text-title-1 font-semibold">
@@ -163,6 +173,36 @@ export default async function TodayPage() {
             </ul>
           )}
         </section>
+
+        <div className="space-y-10">
+        {overdue.length > 0 ? (
+          <section aria-labelledby="overdue-heading" className="space-y-4">
+            <h2 id="overdue-heading" className="text-title-1 font-semibold">
+              Overdue
+            </h2>
+            <ul className="divide-y divide-line overflow-hidden rounded-xl bg-surface ring-1 ring-danger-line">
+              {overdue.slice(0, 4).map((item) => (
+                <li key={item.materialId}>
+                  <Link
+                    href={`${chapterPath(item.batchId, item.courseId, item.chapterId)}?material=${item.materialId}`}
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-sunken/60 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                  >
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-danger-subtle text-danger-subtle-fg">
+                      <AlarmClock aria-hidden="true" className="size-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{item.chapterTitle}</span>
+                      <span className="block truncate text-xs text-content-subtle">
+                        {item.batchName} · {dueState(item.dueAt)?.label}
+                      </span>
+                    </span>
+                    <StatusPill tone="danger">{plural(item.lateStudents, "student")} late</StatusPill>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         <section aria-labelledby="submissions-heading" className="space-y-4">
           <h2 id="submissions-heading" className="text-title-1 font-semibold">
@@ -201,6 +241,7 @@ export default async function TodayPage() {
             </ul>
           )}
         </section>
+        </div>
       </div>
 
       <section id="activity" aria-labelledby="activity-heading" className="scroll-mt-24 space-y-4">

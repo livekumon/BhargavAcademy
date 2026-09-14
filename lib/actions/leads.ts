@@ -8,6 +8,7 @@ import {
   createLead,
   LEAD_STATUS_LABEL,
   listLeads,
+  updateLeadNotes,
   updateLeadStatus,
   type LeadStatus,
 } from "@/lib/leads";
@@ -98,4 +99,15 @@ export async function undoLeadStatus(id: string, status: LeadStatus) {
   await updateLeadStatus(id, asLeadStatus(status));
   revalidatePath(leadsPath());
   revalidatePath("/dashboard", "layout");
+}
+
+export async function saveLeadNotes(formData: FormData) {
+  await requireTeacher();
+  const id = String(formData.get("id") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
+  if (!id) return;
+  const lead = await updateLeadNotes(id, notes);
+  revalidatePath(leadsPath());
+  revalidatePath("/dashboard", "layout");
+  await flash(`Notes saved for ${lead.studentName}`);
 }

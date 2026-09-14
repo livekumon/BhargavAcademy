@@ -70,7 +70,7 @@ export default async function LibraryChapterPage({
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <Surface pad="lg">
           <ChapterForm
             action={updateLibraryChapter.bind(null, course.id, chapter.id)}

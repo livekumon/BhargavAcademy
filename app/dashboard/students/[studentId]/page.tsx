@@ -34,6 +34,7 @@ import { isAssignment } from "@/lib/materials";
 import { batchPath, chapterPath, parentManagePath, studentManagePath, studentsPath, submissionPath } from "@/lib/paths";
 import { getOwnedStudentForTeacher, getStudentMarkEntries, getTeacherBatches } from "@/lib/queries";
 import {
+  dueState,
   firstQueryValue,
   formatScore,
   initials,
@@ -86,7 +87,10 @@ export default async function StudentProfilePage({
   const assignments = work.filter((item) => isAssignment(item.kind));
   const revised = classMaterial.filter((item) => item.completedAt).length;
   const submitted = assignments.filter((item) => item.completedAt).length;
-  const open = [...assignments, ...classMaterial].filter((item) => !item.completedAt);
+  // Overdue first, then anything with a due date, then the rest.
+  const open = [...assignments, ...classMaterial]
+    .filter((item) => !item.completedAt)
+    .sort((a, b) => (a.dueAt?.getTime() ?? Infinity) - (b.dueAt?.getTime() ?? Infinity));
   const recent = work
     .filter((item) => item.completedAt)
     .sort((a, b) => b.completedAt!.getTime() - a.completedAt!.getTime())
@@ -188,7 +192,7 @@ export default async function StudentProfilePage({
       />
 
       {tab === "overview" ? (
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
           <div className="space-y-8">
             <dl className="grid gap-3 sm:grid-cols-3">
               <Surface pad="sm" className="flex flex-col gap-1">
@@ -274,7 +278,13 @@ export default async function StudentProfilePage({
                               {item.materialName} · {item.batchName}
                             </span>
                           </span>
-                          <StatusPill tone={assignment ? "warning" : "info"}>{assignment ? "To submit" : "To revise"}</StatusPill>
+                          {assignment && dueState(item.dueAt) ? (
+                            <StatusPill tone={dueState(item.dueAt)!.tone === "neutral" ? "warning" : dueState(item.dueAt)!.tone}>
+                              {dueState(item.dueAt)!.label}
+                            </StatusPill>
+                          ) : (
+                            <StatusPill tone={assignment ? "warning" : "info"}>{assignment ? "To submit" : "To revise"}</StatusPill>
+                          )}
                         </Link>
                       </li>
                     );

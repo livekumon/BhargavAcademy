@@ -14,6 +14,7 @@ import {
   libraryChapterPath,
   libraryCoursePath,
 } from "@/lib/paths";
+import { parseDateInput } from "@/lib/dates";
 import { parseMaterialKind, type MaterialKind } from "@/lib/materials";
 import {
   getBatchCourse,
@@ -48,11 +49,12 @@ function getSelectedStudentIds(formData: FormData) {
     .filter(Boolean);
 }
 
-function readMaterialKind(formData: FormData):
-  | { kind: MaterialKind; instructions: string }
-  | { error: string } {
+type MaterialFields = { kind: MaterialKind; instructions: string; dueAt: Date | null };
+
+function readMaterialKind(formData: FormData): MaterialFields | { error: string } {
   const kind = parseMaterialKind(formData.get("kind"));
   const instructions = String(formData.get("instructions") ?? "").trim();
+  const dueDate = parseDateInput(String(formData.get("dueAt") ?? "").trim());
 
   if (kind === "assignment" && instructions.length < 2) {
     return {
@@ -63,6 +65,8 @@ function readMaterialKind(formData: FormData):
   return {
     kind,
     instructions: kind === "assignment" ? instructions : "",
+    // Due at the end of that day in India, wherever the server runs.
+    dueAt: kind === "assignment" && dueDate ? new Date(`${dueDate}T23:59:59+05:30`) : null,
   };
 }
 
@@ -70,8 +74,7 @@ async function addBatchPdf(
   batchId: string,
   chapterId: string,
   file: File,
-  kind: MaterialKind,
-  instructions: string,
+  { kind, instructions, dueAt }: MaterialFields,
 ) {
   const nextFileName = await savePdf(file);
   const [next] = await db
@@ -93,6 +96,7 @@ async function addBatchPdf(
     pdfOriginalName: file.name,
     kind,
     instructions,
+    dueAt,
     position: (next?.value ?? 0) + 1,
     updatedAt: new Date(),
   });
@@ -146,8 +150,7 @@ async function saveNewPdfAndAssignments(
   chapterId: string,
   pdf: File | null,
   studentIds: string[],
-  kind: MaterialKind,
-  instructions: string,
+  fields: MaterialFields,
 ) {
   if (!pdf) {
     if (studentIds.length > 0) {
@@ -156,13 +159,7 @@ async function saveNewPdfAndAssignments(
     return;
   }
 
-  const materialId = await addBatchPdf(
-    batchId,
-    chapterId,
-    pdf,
-    kind,
-    instructions,
-  );
+  const materialId = await addBatchPdf(batchId, chapterId, pdf, fields);
   await replaceMaterialAssignments(materialId, batchId, studentIds);
 }
 
@@ -217,8 +214,7 @@ export async function createChapter(
       id,
       pdf,
       studentIds,
-      kindFields?.kind ?? "class_material",
-      kindFields?.instructions ?? "",
+      kindFields ?? { kind: "class_material", instructions: "", dueAt: null },
     );
 
     revalidatePath(libraryCoursePath(courseId));
@@ -338,8 +334,7 @@ export async function uploadBatchMaterial(
       chapterId,
       pdf,
       enrolled.map((student) => student.id),
-      kindFields.kind,
-      kindFields.instructions,
+      kindFields,
     );
     revalidatePath("/dashboard");
     revalidatePath(batchPath(batchId));
@@ -386,8 +381,7 @@ export async function addChapterPdf(
       chapterId,
       pdf,
       getSelectedStudentIds(formData),
-      kindFields.kind,
-      kindFields.instructions,
+      kindFields,
     );
     revalidatePath(coursePath(batchId, courseId));
     revalidatePath(chapterPath(batchId, courseId, chapterId));
@@ -443,6 +437,7 @@ export async function updateChapterPdfAssignments(
     .set({
       kind: kindFields.kind,
       instructions: kindFields.instructions,
+      dueAt: kindFields.dueAt,
       updatedAt: new Date(),
     })
     .where(eq(chapterMaterials.id, material.id));

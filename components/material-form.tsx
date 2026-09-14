@@ -19,6 +19,7 @@ export function MaterialForm({
   showFile = true,
   defaultKind = "class_material",
   defaultInstructions = "",
+  defaultDueAt = "",
 }: {
   action: (state: ChapterState, formData: FormData) => Promise<ChapterState>;
   students: StudentOption[];
@@ -27,6 +28,7 @@ export function MaterialForm({
   showFile?: boolean;
   defaultKind?: MaterialKind;
   defaultInstructions?: string;
+  defaultDueAt?: string;
 }) {
   const [state, formAction, pending] = useActionState(action, {});
   const [selectedIds, setSelectedIds] = useState<string[]>(
@@ -42,6 +44,7 @@ export function MaterialForm({
       <MaterialKindFields
         defaultKind={defaultKind}
         defaultInstructions={defaultInstructions}
+        defaultDueAt={defaultDueAt}
       />
 
       <StudentAssignmentFields

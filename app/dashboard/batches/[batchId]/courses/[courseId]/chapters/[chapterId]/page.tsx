@@ -25,7 +25,7 @@ import { requireTeacher } from "@/lib/auth";
 import { asMaterialKind, isAssignment, splitMaterials } from "@/lib/materials";
 import { batchPath, chapterPath, materialPath, submissionPath } from "@/lib/paths";
 import { getBatchStudents, getCourseBatches, getOwnedChapter } from "@/lib/queries";
-import { firstQueryValue, percent, plural, relativeDay } from "@/lib/teacher-format";
+import { dueDateInput, dueState, firstQueryValue, percent, plural, relativeDay } from "@/lib/teacher-format";
 
 export const metadata: Metadata = {
   title: "Chapter",
@@ -141,7 +141,7 @@ export default async function ChapterPage({
           description={`Upload the first class material or assignment for ${batch.name}. Use "Add material" above.`}
         />
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)]">
           <nav aria-label="Materials in this chapter" className="space-y-5 lg:sticky lg:top-6 lg:self-start">
             <MaterialList title="Class material" icon={BookOpen} materials={classMaterials} selectedId={selected?.id} here={here} />
             <MaterialList title="Assignments" icon={ClipboardList} materials={assignments} selectedId={selected?.id} here={here} />
@@ -210,6 +210,7 @@ function MaterialList({
                     </span>
                     <span className="tabular block text-xs text-content-subtle">
                       {total === 0 ? "Not assigned" : `${done} of ${total} ${assignment ? "submitted" : "revised"}`}
+                      {assignment && material.dueAt && done < total ? ` · ${dueState(material.dueAt)?.label}` : ""}
                     </span>
                   </span>
                   <span
@@ -247,15 +248,22 @@ function MaterialDetail({
   const done = assigned.filter((student) => student.completedAt).length;
   const submissions = assigned.filter((student) => student.submissionFileName).length;
   const pdfUrl = materialPath(material.id);
+  const due = assignment ? dueState(material.dueAt) : null;
+  const late = due?.tone === "danger";
 
   return (
     <section aria-label={material.pdfOriginalName ?? "Material"} className="min-w-0 space-y-5">
       <Surface className="space-y-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <StatusPill tone={assignment ? "highlight" : "brand"}>
-              {assignment ? "Assignment" : "Class material"}
-            </StatusPill>
+            <span className="flex flex-wrap items-center gap-2">
+              <StatusPill tone={assignment ? "highlight" : "brand"}>
+                {assignment ? "Assignment" : "Class material"}
+              </StatusPill>
+              {due ? (
+                <StatusPill tone={done === assigned.length ? "neutral" : due.tone}>{due.label}</StatusPill>
+              ) : null}
+            </span>
             <h2 className="mt-2 text-title-1 font-semibold break-words">
               {material.pdfOriginalName ?? "Untitled PDF"}
             </h2>
@@ -335,8 +343,18 @@ function MaterialDetail({
                 {student.completedAt ? (
                   <span className="text-xs text-content-subtle">{relativeDay(student.completedAt)}</span>
                 ) : null}
-                <StatusPill tone={student.completedAt ? "success" : assignment ? "warning" : "info"}>
-                  {student.completedAt ? (assignment ? "Submitted" : "Revised") : assignment ? "To submit" : "To revise"}
+                <StatusPill tone={student.completedAt ? "success" : assignment ? (late ? "danger" : "warning") : "info"}>
+                  {student.completedAt
+                    ? assignment && material.dueAt && student.completedAt > material.dueAt
+                      ? "Submitted late"
+                      : assignment
+                        ? "Submitted"
+                        : "Revised"
+                    : assignment
+                      ? late
+                        ? "Late"
+                        : "To submit"
+                      : "To revise"}
                 </StatusPill>
                 {student.submissionFileName ? (
                   <Button asChild variant="outline" size="sm">
@@ -370,7 +388,7 @@ function MaterialDetail({
 
       <details className="group rounded-xl bg-surface ring-1 ring-line">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 text-sm font-medium focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
-          Edit who gets it, category and instructions
+          Edit who gets it, category, instructions and due date
           <span className="text-xs text-content-subtle group-open:hidden">Show</span>
           <span className="hidden text-xs text-content-subtle group-open:inline">Hide</span>
         </summary>
@@ -381,6 +399,7 @@ function MaterialDetail({
             assignedStudentIds={assigned.map((student) => student.id)}
             defaultKind={asMaterialKind(material.kind)}
             defaultInstructions={material.instructions}
+            defaultDueAt={dueDateInput(material.dueAt)}
             submitLabel="Save changes"
             showFile={false}
           />

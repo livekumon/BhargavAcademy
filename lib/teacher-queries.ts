@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNotNull } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, isNull, lt } from "drizzle-orm";
 import { db, ensureDatabase } from "./db";
 import { isAssignment } from "./materials";
 import {
@@ -196,6 +196,7 @@ export async function getBatchChapterProgress(batchId: string): Promise<Map<stri
 
 export type StudentWork = {
   id: string;
+  dueAt: Date | null;
   materialId: string;
   materialName: string;
   kind: string;
@@ -220,6 +221,7 @@ export async function getTeacherStudentWork(teacherId: string, studentId: string
       materialId: chapterMaterials.id,
       materialName: chapterMaterials.pdfOriginalName,
       kind: chapterMaterials.kind,
+      dueAt: chapterMaterials.dueAt,
       batchId: batches.id,
       batchName: batches.name,
       courseId: courses.id,
@@ -236,6 +238,7 @@ export async function getTeacherStudentWork(teacherId: string, studentId: string
 
   return rows.map((row) => ({
     id: row.id,
+    dueAt: row.dueAt,
     materialId: row.materialId,
     materialName: row.materialName ?? "PDF material",
     kind: row.kind,
@@ -247,4 +250,68 @@ export async function getTeacherStudentWork(teacherId: string, studentId: string
     chapterId: row.chapterId,
     chapterTitle: row.chapterTitle,
   }));
+}
+
+export type OverdueAssignment = {
+  materialId: string;
+  materialName: string;
+  dueAt: Date;
+  batchId: string;
+  batchName: string;
+  courseId: string;
+  chapterId: string;
+  chapterTitle: string;
+  lateStudents: number;
+};
+
+/** Assignments past their due date that some students still haven't submitted, most overdue first. */
+export async function getTeacherOverdueAssignments(teacherId: string, now = new Date()): Promise<OverdueAssignment[]> {
+  await ensureDatabase();
+
+  const rows = await db
+    .select({
+      materialId: chapterMaterials.id,
+      materialName: chapterMaterials.pdfOriginalName,
+      dueAt: chapterMaterials.dueAt,
+      batchId: batches.id,
+      batchName: batches.name,
+      courseId: courses.id,
+      chapterId: chapters.id,
+      chapterTitle: chapters.title,
+    })
+    .from(chapterMaterialAssignments)
+    .innerJoin(chapterMaterials, eq(chapterMaterialAssignments.materialId, chapterMaterials.id))
+    .innerJoin(batches, eq(chapterMaterials.batchId, batches.id))
+    .innerJoin(chapters, eq(chapterMaterials.chapterId, chapters.id))
+    .innerJoin(courses, eq(chapters.courseId, courses.id))
+    .where(
+      and(
+        eq(batches.teacherId, teacherId),
+        eq(chapterMaterials.kind, "assignment"),
+        isNull(chapterMaterialAssignments.completedAt),
+        lt(chapterMaterials.dueAt, now),
+      ),
+    );
+
+  const byMaterial = new Map<string, OverdueAssignment>();
+  for (const row of rows) {
+    if (!row.dueAt) continue;
+    const current = byMaterial.get(row.materialId);
+    if (current) {
+      current.lateStudents += 1;
+      continue;
+    }
+    byMaterial.set(row.materialId, {
+      materialId: row.materialId,
+      materialName: row.materialName ?? "Assignment",
+      dueAt: row.dueAt,
+      batchId: row.batchId,
+      batchName: row.batchName,
+      courseId: row.courseId,
+      chapterId: row.chapterId,
+      chapterTitle: row.chapterTitle,
+      lateStudents: 1,
+    });
+  }
+  return [...byMaterial.values()].sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime());
 }
