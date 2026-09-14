@@ -455,7 +455,7 @@ export async function updateChapterPdfAssignments(
   revalidatePath(coursePath(batchId, courseId));
   revalidatePath(chapterPath(batchId, courseId, chapterId));
   await flash("Material saved");
-  redirect(chapterPath(batchId, courseId, chapterId));
+  redirect(`${chapterPath(batchId, courseId, chapterId)}?material=${material.id}`);
 }
 
 export async function removeChapterPdf(
@@ -521,7 +521,7 @@ export async function deleteChapter(
   await deleteSharedChapter(courseId, chapterId);
   revalidatePath(coursePath(batchId, courseId));
   await flash("Chapter deleted");
-  redirect(coursePath(batchId, courseId));
+  redirect(`${batchPath(batchId)}?tab=chapters`);
 }
 
 export async function createLibraryChapter(

@@ -456,6 +456,14 @@
   --animate-rise: rise var(--dur-slow) var(--ease-out-quart) both;
   --animate-fade-in: fade-in var(--dur-slow) var(--ease-out-quart) both;
   --animate-float: float 7s var(--ease-in-out-quart) infinite;
+  --animate-draw: draw 900ms var(--ease-out-quart) both;
+
+  /* Rings and trend lines draw in from empty. Needs pathLength="100". */
+  @keyframes draw {
+    from {
+      stroke-dashoffset: 100;
+    }
+  }
 
   @keyframes float {
     0%,

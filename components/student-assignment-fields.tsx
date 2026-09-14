@@ -39,9 +39,9 @@ export function StudentAssignmentFields({
           </div>
         ) : null}
       </div>
-      <div className="rounded-xl border bg-muted/30 p-3">
+      <div className="rounded-xl bg-surface p-3 ring-1 ring-line">
         {students.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-content-muted">
             Add students to this batch first. Then you can choose who should
             see this PDF when they log in.
           </p>
@@ -49,7 +49,7 @@ export function StudentAssignmentFields({
           <ul className="space-y-2">
             {students.map((student) => (
               <li key={student.id}>
-                <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 text-sm hover:bg-background">
+                <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 text-sm hover:bg-sunken">
                   <input
                     type="checkbox"
                     name="studentIds"
@@ -62,7 +62,7 @@ export function StudentAssignmentFields({
                       }
                       onChange(selectedIds.filter((id) => id !== student.id));
                     }}
-                    className="size-4 accent-primary"
+                    className="size-4 accent-(--brand)"
                   />
                   <span>{student.name}</span>
                 </label>
@@ -70,7 +70,7 @@ export function StudentAssignmentFields({
             ))}
           </ul>
         )}
-        <p className="mt-3 text-xs text-muted-foreground">
+        <p className="mt-3 text-xs text-content-muted">
           Only selected students will see this PDF in the student module.
           {students.length > 0
             ? ` ${selectedIds.length} of ${students.length} selected.`
