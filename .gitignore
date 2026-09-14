@@ -9,5 +9,7 @@
 .vercel
 *.tsbuildinfo
 next-env.d.ts
-Untitled/
+/data
+*.db
+Academy Management App/
 website/
