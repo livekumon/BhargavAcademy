@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Users } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 import { EnrollBatchStudentsForm } from "@/components/enroll-batch-students-form";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/page-header";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { Surface } from "@/components/ui/surface";
 import { requireTeacher } from "@/lib/auth";
 import { getLookupCatalog, lookupChoices } from "@/lib/lookups";
 import { batchPath, newStudentPath } from "@/lib/paths";
@@ -47,11 +43,11 @@ export default async function EnrollBatchStudentsPage({
       <EmptyState
         icon={<Users />}
         title="No students in your directory"
-        description="New students are added from the Students tab. After you add someone, come back here to enroll them in this batch."
+        description="Create the first student straight into this batch. They get their own login."
         action={
           <div className="flex flex-wrap justify-center gap-2">
             <Button asChild size="lg">
-              <Link href={newStudentPath()}>Go to Students</Link>
+              <Link href={newStudentPath(batch.id)}>Create a new student</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
               <Link href={batchPath(batch.id)}>Back to batch</Link>
@@ -67,11 +63,11 @@ export default async function EnrollBatchStudentsPage({
       <EmptyState
         icon={<Users />}
         title="Everyone is already in this batch"
-        description="Every student in your directory is enrolled here. Add someone new from the Students tab, then enroll them."
+        description="Every student in your directory is already here. Create a new student to add someone else."
         action={
           <div className="flex flex-wrap justify-center gap-2">
             <Button asChild size="lg">
-              <Link href={newStudentPath()}>Go to Students</Link>
+              <Link href={newStudentPath(batch.id)}>Create a new student</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
               <Link href={batchPath(batch.id)}>Back to batch</Link>
@@ -83,17 +79,29 @@ export default async function EnrollBatchStudentsPage({
   }
 
   return (
-    <Card className="mx-auto max-w-2xl">
-      <CardHeader>
-        <CardTitle className="font-heading text-3xl">
-          Add students to {batch.name}
-        </CardTitle>
-        <CardDescription>
-          Select people from your directory. New student profiles are created
-          only from the Students tab.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        breadcrumb={
+          <Breadcrumb
+            items={[
+              { label: "Batches", href: "/dashboard/batches" },
+              { label: batch.name, href: batchPath(batch.id) },
+              { label: "Add students" },
+            ]}
+          />
+        }
+        title={`Add students to ${batch.name}`}
+        description="Pick people already in your directory, or create someone new straight into this batch."
+        actions={
+          <Button asChild variant="outline" size="lg">
+            <Link href={newStudentPath(batch.id)}>
+              <Plus data-icon="inline-start" />
+              New student
+            </Link>
+          </Button>
+        }
+      />
+      <Surface pad="lg" className="max-w-3xl">
         <EnrollBatchStudentsForm
           students={available}
           batchId={batch.id}
@@ -101,7 +109,7 @@ export default async function EnrollBatchStudentsPage({
           exams={lookupChoices(catalog.exam)}
           cancelHref={batchPath(batch.id)}
         />
-      </CardContent>
-    </Card>
+      </Surface>
+    </div>
   );
 }

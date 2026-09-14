@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireTeacher } from "@/lib/auth";
 import { db, ensureDatabase, nextAcademyEmail } from "@/lib/db";
-import { resolveAccountPassword } from "@/lib/identity";
+import { DEFAULT_PASSWORD, resolveAccountPassword } from "@/lib/identity";
 import { parentChildPath, parentManagePath, parentsPath } from "@/lib/paths";
 import {
   getOwnedParentForTeacher,
@@ -218,4 +218,31 @@ export async function deleteParent(formData: FormData) {
   revalidateParentPaths(parentId, studentIds);
   await flash(`${owned.name}'s parent login deleted`);
   redirect(parentsPath());
+}
+
+export async function resetParentPassword(parentId: string) {
+  const teacher = await requireTeacher();
+  await ensureDatabase();
+
+  const owned = await getOwnedParentForTeacher(teacher.id, parentId);
+  if (!owned) {
+    redirect(parentsPath());
+  }
+
+  await db
+    .update(parents)
+    .set({ passwordHash: await hash(DEFAULT_PASSWORD, 10), mustChangePassword: true })
+    .where(eq(parents.id, parentId));
+
+  revalidateParentPaths(parentId, owned.students.map((student) => student.id));
+  await flash(`${owned.name}'s password reset to ${DEFAULT_PASSWORD}`, {
+    description: "They'll be asked to choose a new one when they sign in.",
+  });
+  redirect(parentsPath());
+}
+
+export async function deleteParentById(parentId: string) {
+  const formData = new FormData();
+  formData.set("parentId", parentId);
+  await deleteParent(formData);
 }

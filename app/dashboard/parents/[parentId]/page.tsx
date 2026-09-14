@@ -1,33 +1,25 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { KeyRound, Trash2 } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 import { ParentForm } from "@/components/parent-form";
-import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { deleteParent, updateParent } from "@/lib/actions/parents";
+import { CopyButton } from "@/components/teacher/copy-button";
+import { MoreMenu } from "@/components/teacher/more-menu";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { StatusPill } from "@/components/ui/status-pill";
+import { Surface } from "@/components/ui/surface";
+import { deleteParentById, resetParentPassword, updateParent } from "@/lib/actions/parents";
 import { requireTeacher } from "@/lib/auth";
+import { DEFAULT_PASSWORD } from "@/lib/identity";
+import { parentLoginMessage } from "@/lib/login-details";
 import { parentsPath } from "@/lib/paths";
-import {
-  getOwnedParentForTeacher,
-  getTeacherParentPickerStudents,
-} from "@/lib/queries";
+import { getOwnedParentForTeacher, getTeacherParentPickerStudents } from "@/lib/queries";
 
 export const metadata: Metadata = {
   title: "Edit parent",
 };
 
-export default async function EditParentPage({
-  params,
-}: {
-  params: Promise<{ parentId: string }>;
-}) {
+export default async function EditParentPage({ params }: { params: Promise<{ parentId: string }> }) {
   const { parentId } = await params;
   const teacher = await requireTeacher();
   const [parent, students] = await Promise.all([
@@ -40,48 +32,55 @@ export default async function EditParentPage({
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div>
-        <Button asChild variant="ghost" size="sm" className="-ml-2 mb-3">
-          <Link href={parentsPath()}>Back to parents</Link>
-        </Button>
-        <p className="text-sm font-medium text-brand">Parent login</p>
-        <h1 className="font-heading mt-1 text-4xl font-semibold tracking-tight">
-          {parent.name}
-        </h1>
-        <p className="mt-2 font-mono text-sm text-content-muted">{parent.email}</p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-heading text-2xl">Mapping</CardTitle>
-          <CardDescription>
-            Change who signs in with this login, and which students appear on
-            their dashboard.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ParentForm
-            action={updateParent.bind(null, parent.id)}
-            parentId={parent.id}
-            students={students}
-            defaultValues={{
-              name: parent.name,
-              email: parent.email,
-              studentIds: parent.students.map((student) => student.id),
-            }}
-            submitLabel="Save parent"
-            cancelHref={parentsPath()}
-          />
-        </CardContent>
-      </Card>
-
-      <form action={deleteParent}>
-        <input type="hidden" name="parentId" value={parent.id} />
-        <ConfirmSubmitButton message={`Delete ${parent.name}'s parent login? Students stay in the academy.`}>
-          Delete parent login
-        </ConfirmSubmitButton>
-      </form>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        breadcrumb={<Breadcrumb items={[{ label: "Parents", href: parentsPath() }, { label: parent.name }]} />}
+        eyebrow="Parent login"
+        title={parent.name}
+        description={parent.email}
+        actions={
+          <>
+            <StatusPill tone={parent.mustChangePassword ? "highlight" : "success"}>
+              {parent.mustChangePassword ? "Not signed in yet" : "Active"}
+            </StatusPill>
+            <CopyButton text={parentLoginMessage(parent)} label="Copy login" copiedMessage="Login copied. Paste it into WhatsApp." />
+            <MoreMenu
+              label={`More actions for ${parent.name}`}
+              dangers={[
+                {
+                  label: "Reset password",
+                  icon: <KeyRound aria-hidden="true" />,
+                  title: `Reset ${parent.name}'s password?`,
+                  message: `Their password goes back to ${DEFAULT_PASSWORD} and they'll choose a new one at their next sign-in.`,
+                  action: resetParentPassword.bind(null, parent.id),
+                },
+                {
+                  label: "Delete login",
+                  icon: <Trash2 aria-hidden="true" />,
+                  title: `Delete ${parent.name}'s login?`,
+                  message: "They won't be able to sign in any more.",
+                  consequences: ["Their children stay enrolled and keep all their progress."],
+                  action: deleteParentById.bind(null, parent.id),
+                },
+              ]}
+            />
+          </>
+        }
+      />
+      <Surface pad="lg" className="max-w-3xl">
+        <ParentForm
+          action={updateParent.bind(null, parent.id)}
+          parentId={parent.id}
+          students={students}
+          defaultValues={{
+            name: parent.name,
+            email: parent.email,
+            studentIds: parent.students.map((student) => student.id),
+          }}
+          submitLabel="Save parent"
+          cancelHref={parentsPath()}
+        />
+      </Surface>
     </div>
   );
 }

@@ -193,3 +193,58 @@ export async function getBatchChapterProgress(batchId: string): Promise<Map<stri
   }
   return progress;
 }
+
+export type StudentWork = {
+  id: string;
+  materialId: string;
+  materialName: string;
+  kind: string;
+  completedAt: Date | null;
+  hasSubmission: boolean;
+  batchId: string;
+  batchName: string;
+  courseId: string;
+  chapterId: string;
+  chapterTitle: string;
+};
+
+/** Every piece of work assigned to one student in this teacher's batches. */
+export async function getTeacherStudentWork(teacherId: string, studentId: string): Promise<StudentWork[]> {
+  await ensureDatabase();
+
+  const rows = await db
+    .select({
+      id: chapterMaterialAssignments.id,
+      completedAt: chapterMaterialAssignments.completedAt,
+      submissionFileName: chapterMaterialAssignments.submissionFileName,
+      materialId: chapterMaterials.id,
+      materialName: chapterMaterials.pdfOriginalName,
+      kind: chapterMaterials.kind,
+      batchId: batches.id,
+      batchName: batches.name,
+      courseId: courses.id,
+      chapterId: chapters.id,
+      chapterTitle: chapters.title,
+    })
+    .from(chapterMaterialAssignments)
+    .innerJoin(chapterMaterials, eq(chapterMaterialAssignments.materialId, chapterMaterials.id))
+    .innerJoin(batches, eq(chapterMaterials.batchId, batches.id))
+    .innerJoin(chapters, eq(chapterMaterials.chapterId, chapters.id))
+    .innerJoin(courses, eq(chapters.courseId, courses.id))
+    .where(and(eq(batches.teacherId, teacherId), eq(chapterMaterialAssignments.studentId, studentId)))
+    .orderBy(desc(chapterMaterialAssignments.createdAt));
+
+  return rows.map((row) => ({
+    id: row.id,
+    materialId: row.materialId,
+    materialName: row.materialName ?? "PDF material",
+    kind: row.kind,
+    completedAt: row.completedAt,
+    hasSubmission: Boolean(row.submissionFileName),
+    batchId: row.batchId,
+    batchName: row.batchName,
+    courseId: row.courseId,
+    chapterId: row.chapterId,
+    chapterTitle: row.chapterTitle,
+  }));
+}

@@ -1,6 +1,7 @@
 "use server";
 
 import { flash } from "@/lib/flash";
+import { updateLeadStatus } from "@/lib/leads";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -144,6 +145,18 @@ async function unenrollFromBatch(studentId: string, batchId: string) {
   }
 }
 
+/** A student created from a website enquiry closes that lead. */
+async function markLeadEnrolled(formData: FormData) {
+  const leadId = String(formData.get("leadId") ?? "").trim();
+  if (!leadId) return;
+  try {
+    await updateLeadStatus(leadId, "enrolled");
+    revalidatePath("/dashboard/leads");
+  } catch {
+    // The lead may have been removed; the student is created either way.
+  }
+}
+
 function safeNext(value: unknown) {
   const next = String(value ?? "").trim();
   return next.startsWith("/dashboard/") && !next.startsWith("//") ? next : "";
@@ -239,6 +252,7 @@ export async function createStudent(
     }
 
     revalidateStudentPaths(batch.id, existing.id);
+    await markLeadEnrolled(formData);
     await flash(`${existing.name} added to ${batch.name}`);
     redirect(safeNext(formData.get("next")) || batchPath(batch.id));
   }
@@ -269,6 +283,7 @@ export async function createStudent(
   }
 
   revalidateStudentPaths(batch.id, studentId);
+  await markLeadEnrolled(formData);
   await flash(`${name} added`, { description: `Enrolled in ${batch.name}. Their login is ${email}.` });
   redirect(safeNext(formData.get("next")) || batchPath(batch.id));
 }
