@@ -254,8 +254,33 @@
 /* =========================================================================
    ROLE THEMING
    Put data-role on any shell. Every component that uses --brand-* follows.
-   Teacher inherits the default indigo.
+   Teacher is the default indigo; it is restated so a teacher-tinted element
+   nested inside another role (e.g. the auth role switcher) still resolves.
    ========================================================================= */
+
+/* Aliases resolve where they are declared, so a `var(--brand)` set on :root
+   would stay indigo inside a student or parent shell. Re-declaring them on
+   every role element makes shadcn components (Button, focus rings) follow. */
+[data-role] {
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-fg);
+  --ring: var(--brand-ring);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--brand-fg);
+  --sidebar-ring: var(--brand-ring);
+}
+
+[data-role="teacher"] {
+  --brand: var(--indigo-800);
+  --brand-hover: var(--indigo-700);
+  --brand-active: var(--indigo-900);
+  --brand-subtle: var(--indigo-50);
+  --brand-subtle-fg: var(--indigo-800);
+  --brand-muted: var(--indigo-100);
+  --brand-line: var(--indigo-200);
+  --brand-ring: var(--indigo-500);
+  --elevation-brand: 0 10px 32px oklch(0.35 0.11 268 / 0.22);
+}
 
 [data-role="student"] {
   --brand: var(--teal-700);
@@ -430,6 +455,17 @@
   /* Animation */
   --animate-rise: rise var(--dur-slow) var(--ease-out-quart) both;
   --animate-fade-in: fade-in var(--dur-slow) var(--ease-out-quart) both;
+  --animate-float: float 7s var(--ease-in-out-quart) infinite;
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: none;
+    }
+    50% {
+      transform: translateY(-6px);
+    }
+  }
 
   @keyframes rise {
     from {

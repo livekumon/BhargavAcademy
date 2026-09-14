@@ -87,10 +87,13 @@ export async function getCurrentTeacher(): Promise<Teacher | null> {
   return teacher ?? null;
 }
 
-export async function requireTeacher() {
+export async function requireTeacher(options?: { allowPendingPassword?: boolean }) {
   const teacher = await getCurrentTeacher();
   if (!teacher) {
     redirect("/login");
+  }
+  if (teacher.mustChangePassword && !options?.allowPendingPassword) {
+    redirect("/login/set-password");
   }
   return teacher;
 }
@@ -163,10 +166,13 @@ export async function getCurrentStudent(): Promise<Student | null> {
   return student ?? null;
 }
 
-export async function requireStudent() {
+export async function requireStudent(options?: { allowPendingPassword?: boolean }) {
   const student = await getCurrentStudent();
   if (!student) {
     redirect("/student/login");
+  }
+  if (student.mustChangePassword && !options?.allowPendingPassword) {
+    redirect("/student/login/set-password");
   }
   return student;
 }
@@ -239,10 +245,13 @@ export async function getCurrentParent(): Promise<Parent | null> {
   return parent ?? null;
 }
 
-export async function requireParent() {
+export async function requireParent(options?: { allowPendingPassword?: boolean }) {
   const parent = await getCurrentParent();
   if (!parent) {
     redirect("/parent/login");
+  }
+  if (parent.mustChangePassword && !options?.allowPendingPassword) {
+    redirect("/parent/login/set-password");
   }
   return parent;
 }

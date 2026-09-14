@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { AuthHeading } from "@/components/auth/auth-heading";
+import { AuthShell } from "@/components/auth/auth-shell";
+import { AuthShowcase } from "@/components/auth/auth-showcase";
 import { AuthForm } from "@/components/auth-form";
-import { Logo } from "@/components/logo";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { registerTeacher } from "@/lib/actions/auth";
 
 export const metadata: Metadata = {
@@ -10,19 +12,30 @@ export const metadata: Metadata = {
 
 export default function RegisterPage() {
   return (
-    <div className="flex min-h-full flex-col items-center justify-center px-6 py-12">
-      <Logo className="mb-8" />
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="font-heading text-2xl">Create your workspace</CardTitle>
-          <CardDescription>
-            Register as a teacher to start adding courses and chapter PDFs.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AuthForm action={registerTeacher} mode="register" />
-        </CardContent>
-      </Card>
-    </div>
+    <AuthShell role="teacher" showcase={<AuthShowcase variant="register" />}>
+      <div className="space-y-8">
+        <AuthHeading
+          title="Create your workspace"
+          description="Register as a teacher to set up batches, courses, and chapter PDFs. Students and parents get their logins from you."
+        />
+        <AuthForm
+          action={registerTeacher}
+          mode="register"
+          emailPlaceholder="you@bhargavacademy.com"
+          submitLabel="Create teacher account"
+          footer={
+            <>
+              Already have an account?{" "}
+              <Link
+                href="/login"
+                className="rounded-sm font-medium text-brand underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+              >
+                Sign in
+              </Link>
+            </>
+          }
+        />
+      </div>
+    </AuthShell>
   );
 }

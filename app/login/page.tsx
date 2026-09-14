@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AuthHeading } from "@/components/auth/auth-heading";
+import { AuthShell } from "@/components/auth/auth-shell";
+import { AuthShowcase } from "@/components/auth/auth-showcase";
+import { RoleSwitcher } from "@/components/auth/role-switcher";
 import { AuthForm } from "@/components/auth-form";
-import { Logo } from "@/components/logo";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { loginTeacher } from "@/lib/actions/auth";
+import {
+  SAMPLE_TEACHER_EMAIL,
+  SAMPLE_TEACHER_PASSWORD,
+} from "@/lib/seed";
 
 export const metadata: Metadata = {
   title: "Teacher sign in",
@@ -11,49 +17,39 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-full flex-col items-center justify-center px-6 py-12">
-      <Logo className="mb-8" />
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="font-heading text-2xl">Welcome back</CardTitle>
-          <CardDescription>
-            Sign in to manage batches, shared courses, and batch-specific PDFs.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AuthForm
-            action={loginTeacher}
-            mode="login"
-            footer={
-              <p className="text-center text-sm text-muted-foreground">
-                Parent?{" "}
-                <Link href="/parent/login" className="font-medium text-primary hover:underline">
-                  Sign in here
-                </Link>
-                {" · "}
-                Student?{" "}
-                <Link href="/student/login" className="font-medium text-primary hover:underline">
-                  Sign in here
-                </Link>
-                {" · "}
-                New teacher?{" "}
-                <Link href="/register" className="font-medium text-primary hover:underline">
-                  Create an account
-                </Link>
-              </p>
-            }
-          />
-          <div className="mt-5 rounded-xl bg-muted px-4 py-3 text-sm text-muted-foreground">
-            Prototype login
-            <br />
-            Email: <span className="font-medium text-foreground">teacher@academy.test</span>
-            <br />
-            Password: <span className="font-medium text-foreground">Teacher123!</span>
-            <br />
-            Dummy batches, students, courses, and PDFs load automatically.
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    <AuthShell role="teacher" showcase={<AuthShowcase variant="teacher" />}>
+      <div className="space-y-8">
+        <RoleSwitcher current="teacher" />
+        <AuthHeading
+          title="Welcome back"
+          description="Sign in to run your batches, courses, and class material."
+        />
+        <AuthForm
+          action={loginTeacher}
+          mode="login"
+          emailPlaceholder="you@bhargavacademy.com"
+          submitLabel="Sign in"
+          demo={{
+            name: "Bhargav",
+            description:
+              "Admin teacher. First sign-in asks you to set a new password.",
+            email: SAMPLE_TEACHER_EMAIL,
+            password: SAMPLE_TEACHER_PASSWORD,
+          }}
+          help="Default accounts use password 123456. On first sign-in you'll choose a new one. If you've lost access, create a new teacher account."
+          footer={
+            <>
+              New to Bhargav Academy?{" "}
+              <Link
+                href="/register"
+                className="rounded-sm font-medium text-brand underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+              >
+                Create a teacher account
+              </Link>
+            </>
+          }
+        />
+      </div>
+    </AuthShell>
   );
 }

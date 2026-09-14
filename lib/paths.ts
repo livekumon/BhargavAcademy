@@ -22,6 +22,10 @@ export function studentsPath() {
   return "/dashboard/students";
 }
 
+export function leadsPath() {
+  return "/dashboard/leads";
+}
+
 export function newStudentPath(batchId?: string) {
   return batchId
     ? `/dashboard/students/new?batchId=${encodeURIComponent(batchId)}`
@@ -34,6 +38,18 @@ export function enrollBatchStudentsPath(batchId: string) {
 
 export function studentManagePath(studentId: string) {
   return `/dashboard/students/${studentId}`;
+}
+
+export function parentsPath() {
+  return "/dashboard/parents";
+}
+
+export function newParentPath() {
+  return "/dashboard/parents/new";
+}
+
+export function parentManagePath(parentId: string) {
+  return `/dashboard/parents/${parentId}`;
 }
 
 export function libraryCoursePath(courseId: string) {

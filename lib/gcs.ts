@@ -1,6 +1,7 @@
 import { Storage, type Bucket } from "@google-cloud/storage";
 
 const OBJECT_PREFIX = "pdfs";
+const LEADS_PREFIX = "leads";
 
 type ServiceAccount = {
   project_id?: string;
@@ -87,6 +88,34 @@ export async function deletePdfFromGcs(fileName: string) {
   await getGcsBucket()
     .file(gcsObjectPath(fileName))
     .delete({ ignoreNotFound: true });
+}
+
+export function gcsLeadPath(leadId: string) {
+  return `${LEADS_PREFIX}/${leadId}.json`;
+}
+
+export async function saveLeadJsonToGcs(leadId: string, payload: unknown) {
+  const file = getGcsBucket().file(gcsLeadPath(leadId));
+  await file.save(JSON.stringify(payload), {
+    contentType: "application/json",
+    resumable: false,
+    metadata: {
+      cacheControl: "private, max-age=0, must-revalidate",
+    },
+  });
+}
+
+export async function listLeadJsonFromGcs<T>(): Promise<T[]> {
+  const [files] = await getGcsBucket().getFiles({ prefix: `${LEADS_PREFIX}/` });
+  const records = await Promise.all(
+    files
+      .filter((file) => file.name.endsWith(".json"))
+      .map(async (file) => {
+        const [bytes] = await file.download();
+        return JSON.parse(bytes.toString("utf8")) as T;
+      }),
+  );
+  return records;
 }
 
 export async function verifyGcsConnection() {

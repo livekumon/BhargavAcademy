@@ -1,12 +1,13 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-
-const WHATSAPP = "918074474524";
+import { submitEnquiry } from "@/lib/actions/leads";
 
 export function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const nodes = document.querySelectorAll(".reveal");
@@ -22,41 +23,32 @@ export function LandingPage() {
     return () => obs.disconnect();
   }, []);
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     const parent = String(data.get("parent") ?? "").trim();
     const student = String(data.get("student") ?? "").trim();
     const phone = String(data.get("phone") ?? "").trim();
     const cls = String(data.get("cls") ?? "").trim();
-    const subjects = String(data.get("subjects") ?? "").trim();
-    const message = String(data.get("message") ?? "").trim();
 
     if (!parent || !student || !phone || !cls) {
-      window.alert("Please fill in all required fields before sending.");
+      setError("Please fill in all required fields before sending.");
       return;
     }
 
-    const text =
-      "🎓 *New Enquiry – Bhargav Academy*\n\n" +
-      "👤 *Parent Name:* " + parent + "\n" +
-      "👦 *Student Name:* " + student + "\n" +
-      "📞 *Phone:* " + phone + "\n" +
-      "🏫 *Class:* " + cls + "\n" +
-      "📚 *Subjects:* " + subjects + "\n" +
-      (message ? "💬 *Message:* " + message + "\n" : "") +
-      "\n_Sent from bhargavacademy.com_";
-
+    setError("");
     setSending(true);
-    window.open(
-      `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(text)}`,
-      "_blank",
-      "noopener,noreferrer",
-    );
-    window.setTimeout(() => {
-      setSending(false);
-      event.currentTarget.reset();
-    }, 4000);
+    const result = await submitEnquiry(data);
+    setSending(false);
+
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+
+    setSent(true);
+    form.reset();
   }
 
   return (
@@ -74,7 +66,7 @@ export function LandingPage() {
       <li><a href="#programs" onClick={() => setMenuOpen(false)}>Programs</a></li>
       <li><a href="#results" onClick={() => setMenuOpen(false)}>Results</a></li>
       <li><a href="#gate" onClick={() => setMenuOpen(false)}>Our Alumni</a></li>
-      <li><a href="/portal" onClick={() => setMenuOpen(false)}>Portal</a></li>
+      <li><a href="/login" className="nav-login" onClick={() => setMenuOpen(false)}>Log In</a></li>
       <li><a href="#contact" className="nav-cta" onClick={() => setMenuOpen(false)}>Enroll Now</a></li>
     </ul>
   </div>
@@ -96,7 +88,7 @@ export function LandingPage() {
       </div>
       <div className="hero-btns">
         <a href="#contact" className="btn-primary">Enroll Your Child</a>
-        <a href="https://wa.me/918074474524" target="_blank" rel="noopener noreferrer" className="btn-secondary">💬 WhatsApp Us</a>
+        <a href="/login" className="btn-secondary">Log In</a>
       </div>
     </div>
     <div className="hero-photo-wrap">
@@ -552,47 +544,63 @@ export function LandingPage() {
       </div>
       <div className="enroll-form reveal reveal-delay-1">
         <h3>Enquiry Form</h3>
-        <form id="baForm" onSubmit={onSubmit}>
-          <div className="form-grid">
-            <div className="form-group">
-              <label>Parent's Name *</label>
-              <input id="f_parent" name="parent" type="text" placeholder="Your name" required />
-            </div>
-            <div className="form-group">
-              <label>Student's Name *</label>
-              <input id="f_student" name="student" type="text" placeholder="Child's name" required />
-            </div>
+        {sent ? (
+          <div className="form-success">
+            <h4>Thank you</h4>
+            <p>
+              We received your enquiry and will call you shortly. You can also
+              WhatsApp us on +91 80744 74524 if you need a faster reply.
+            </p>
           </div>
-          <div className="form-grid">
-            <div className="form-group">
-              <label>Phone Number *</label>
-              <input id="f_phone" name="phone" type="tel" placeholder="+91 XXXXX XXXXX" required />
+        ) : (
+          <form id="baForm" onSubmit={onSubmit}>
+            {error ? <p className="form-error">{error}</p> : null}
+            <div className="form-grid">
+              <div className="form-group">
+                <label>Parent's Name *</label>
+                <input id="f_parent" name="parent" type="text" placeholder="Your name" required />
+              </div>
+              <div className="form-group">
+                <label>Student's Name *</label>
+                <input id="f_student" name="student" type="text" placeholder="Child's name" required />
+              </div>
+            </div>
+            <div className="form-grid">
+              <div className="form-group">
+                <label>Phone Number *</label>
+                <input id="f_phone" name="phone" type="tel" placeholder="+91 XXXXX XXXXX" required />
+              </div>
+              <div className="form-group">
+                <label>Class *</label>
+                <select id="f_class" name="cls" required>
+                  <option value="">Select Class</option>
+                  <option>Class 8</option>
+                  <option>Class 9</option>
+                  <option>Class 10</option>
+                </select>
+              </div>
             </div>
             <div className="form-group">
-              <label>Class *</label>
-              <select id="f_class" name="cls" required>
-                <option value="">Select Class</option>
-                <option>Class 8</option>
-                <option>Class 9</option><option>Class 10</option>
+              <label>Subject(s) of Interest</label>
+              <select id="f_subjects" name="subjects">
+                <option>Mathematics + Physics + Chemistry</option>
+                <option>Mathematics only</option>
+                <option>Mathematics + Physics</option>
+                <option>Mathematics + Chemistry</option>
               </select>
             </div>
-          </div>
-          <div className="form-group">
-            <label>Subject(s) of Interest</label>
-            <select id="f_subjects" name="subjects">
-              <option>Mathematics + Physics + Chemistry</option>
-              <option>Mathematics only</option>
-              <option>Mathematics + Physics</option>
-              <option>Mathematics + Chemistry</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label>Message (optional)</label>
-            <textarea id="f_message" name="message" rows={3} placeholder="Any questions or specific requirements..."></textarea>
-          </div>
-          <button type="submit" id="f_btn" className="submit-btn" disabled={sending}>{sending ? "✓ Opening WhatsApp..." : "💬 Send via WhatsApp"}</button>
-          <p style={{ fontSize: "12px", color: "#999", textAlign: "center", marginTop: "10px" }}>Opens WhatsApp with your details pre-filled</p>
-        </form>
+            <div className="form-group">
+              <label>Message (optional)</label>
+              <textarea id="f_message" name="message" rows={3} placeholder="Any questions or specific requirements..."></textarea>
+            </div>
+            <button type="submit" id="f_btn" className="submit-btn" disabled={sending}>
+              {sending ? "Sending..." : "Submit enquiry"}
+            </button>
+            <p style={{ fontSize: "12px", color: "#999", textAlign: "center", marginTop: "10px" }}>
+              Your details are sent to Bhargav Academy. We will contact you on the phone number you share.
+            </p>
+          </form>
+        )}
       </div>
     </div>
   </div>
@@ -614,8 +622,7 @@ export function LandingPage() {
           <li><a href="#results" onClick={() => setMenuOpen(false)}>Student Results</a></li>
           <li><a href="#gate" onClick={() => setMenuOpen(false)}>GATE Alumni</a></li>
           <li><a href="#contact">Enroll Now</a></li>
-          <li><a href="/portal">Academy portal</a></li>
-          <li><a href="/login">Teacher login</a></li>
+          <li><a href="/login">Log in</a></li>
           <li><a href="/student/login">Student login</a></li>
           <li><a href="/parent/login">Parent login</a></li>
         </ul>

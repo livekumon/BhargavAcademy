@@ -94,13 +94,14 @@ export function StudentForm({
           name="email"
           type="email"
           defaultValue={defaultValues?.email}
-          placeholder="ananya@student.test"
-          required
+          placeholder="ananyas@bhargavacademy.com"
+          required={isEdit}
         />
         {isEdit ? null : (
           <p className="text-xs text-muted-foreground">
-            If this email already belongs to one of your students, they will be
-            enrolled in this batch.
+            Leave blank to generate a unique @bhargavacademy.com email from the
+            student name. If this email already belongs to one of your students,
+            they will be enrolled in this batch.
           </p>
         )}
       </div>
@@ -162,11 +163,12 @@ export function StudentForm({
           name="parentEmail"
           type="email"
           defaultValue={defaultValues?.parentEmail}
-          placeholder="parent@academy.test"
+          placeholder="priyas@bhargavacademy.com"
         />
         <p className="text-xs text-muted-foreground">
-          Use the same parent email on more than one student so they share one
-          login.
+          Leave blank to generate a unique @bhargavacademy.com email from the
+          parent name. Use the same parent email on more than one student so they
+          share one login.
         </p>
       </div>
 
@@ -181,7 +183,7 @@ export function StudentForm({
           placeholder={
             isEdit
               ? "Leave blank to keep the current parent password"
-              : "Required only when creating a new parent"
+              : "Leave blank to use 123456. They must change it on first login."
           }
         />
       </div>
@@ -195,9 +197,8 @@ export function StudentForm({
           placeholder={
             isEdit
               ? "Leave blank to keep the current password"
-              : "Required for a new student. Leave blank to enroll an existing email."
+              : "Leave blank to use 123456. They must change it on first login."
           }
-          minLength={8}
           required={false}
         />
       </div>

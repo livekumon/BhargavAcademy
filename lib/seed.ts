@@ -1,12 +1,20 @@
+import {
+  ADMIN_EMAIL,
+  DEFAULT_PASSWORD,
+  uniqueAcademyEmail,
+} from "./identity";
+
 export const PROTOTYPE_EVENING_BATCH_ID = "batch-grade-10-evening";
 export const PROTOTYPE_ENGLISH_BATCH_ID = "batch-grade-10-english";
-export const SAMPLE_STUDENT_EMAIL = "ananya@student.test";
-export const SAMPLE_STUDENT_PASSWORD = "Student123!";
-export const SAMPLE_PARENT_EMAIL = "parent@academy.test";
-export const SAMPLE_PARENT_PASSWORD = "Parent123!";
+export const SAMPLE_TEACHER_EMAIL = ADMIN_EMAIL;
+export const SAMPLE_TEACHER_PASSWORD = DEFAULT_PASSWORD;
+export const SAMPLE_STUDENT_PASSWORD = DEFAULT_PASSWORD;
+export const SAMPLE_PARENT_PASSWORD = DEFAULT_PASSWORD;
 
-export function dummyStudentEmail(studentId: string) {
-  return `${studentId.replace("student-", "")}@student.test`;
+const dummyEmailTaken = new Set<string>([ADMIN_EMAIL]);
+
+function dummyEmail(name: string) {
+  return uniqueAcademyEmail(name, dummyEmailTaken);
 }
 
 export function dummyMaterialId(batchId: string, pdf: string) {
@@ -88,10 +96,20 @@ export const dummyBatches = [
         id: "student-ananya",
         name: "Ananya Sharma",
         contactNumber: "9876543210",
-        email: SAMPLE_STUDENT_EMAIL,
+        email: dummyEmail("Ananya Sharma"),
       },
-      { id: "student-rohan", name: "Rohan Patel", contactNumber: "9876501234" },
-      { id: "student-meera", name: "Meera Iyer", contactNumber: "9988776655" },
+      {
+        id: "student-rohan",
+        name: "Rohan Patel",
+        contactNumber: "9876501234",
+        email: dummyEmail("Rohan Patel"),
+      },
+      {
+        id: "student-meera",
+        name: "Meera Iyer",
+        contactNumber: "9988776655",
+        email: dummyEmail("Meera Iyer"),
+      },
     ],
     courseIds: ["course-physics"],
     materials: [
@@ -158,8 +176,18 @@ export const dummyBatches = [
     description:
       "Same Physics course as the morning batch, with different PDFs so you can compare the two.",
     students: [
-      { id: "student-ishaan", name: "Ishaan Kapoor", contactNumber: "9876511111" },
-      { id: "student-zara", name: "Zara Khan", contactNumber: "9876522222" },
+      {
+        id: "student-ishaan",
+        name: "Ishaan Kapoor",
+        contactNumber: "9876511111",
+        email: dummyEmail("Ishaan Kapoor"),
+      },
+      {
+        id: "student-zara",
+        name: "Zara Khan",
+        contactNumber: "9876522222",
+        email: dummyEmail("Zara Khan"),
+      },
     ],
     courseIds: ["course-physics"],
     materials: [
@@ -192,13 +220,23 @@ export const dummyBatches = [
     name: "Grade 8 Afternoon",
     description: "After-school batch using the shared Mathematics course.",
     students: [
-      { id: "student-kabir", name: "Kabir Singh", contactNumber: "9123456780" },
-      { id: "student-diya", name: "Diya Nair", contactNumber: "9000011122" },
+      {
+        id: "student-kabir",
+        name: "Kabir Singh",
+        contactNumber: "9123456780",
+        email: dummyEmail("Kabir Singh"),
+      },
+      {
+        id: "student-diya",
+        name: "Diya Nair",
+        contactNumber: "9000011122",
+        email: dummyEmail("Diya Nair"),
+      },
       {
         id: "student-aarav",
         name: "Aarav Sharma",
         contactNumber: "9876532100",
-        email: "aarav@student.test",
+        email: dummyEmail("Aarav Sharma"),
       },
     ],
     courseIds: ["course-math"],
@@ -244,7 +282,18 @@ export const dummyParents = [
   {
     id: "parent-priya",
     name: "Priya Sharma",
-    email: SAMPLE_PARENT_EMAIL,
+    email: dummyEmail("Priya Sharma"),
     studentIds: ["student-ananya", "student-aarav"],
   },
 ] as const;
+
+export const SAMPLE_STUDENT_EMAIL = dummyBatches[0].students[0].email;
+export const SAMPLE_PARENT_EMAIL = dummyParents[0].email;
+
+export function dummyStudentEmail(studentId: string) {
+  for (const batch of dummyBatches) {
+    const student = batch.students.find((item) => item.id === studentId);
+    if (student) return student.email;
+  }
+  return uniqueAcademyEmail(studentId.replace(/^student-/, ""), new Set([ADMIN_EMAIL]));
+}
