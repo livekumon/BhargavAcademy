@@ -2,7 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { requireTeacher } from "@/lib/auth";
-import { createLead, updateLeadStatus } from "@/lib/leads";
+import { flash } from "@/lib/flash";
+import {
+  asLeadStatus,
+  createLead,
+  LEAD_STATUS_LABEL,
+  listLeads,
+  updateLeadStatus,
+  type LeadStatus,
+} from "@/lib/leads";
 import { leadsPath } from "@/lib/paths";
 
 export type EnquiryState = {
@@ -73,10 +81,21 @@ export async function setLeadStatus(formData: FormData) {
   await requireTeacher();
   const id = String(formData.get("id") ?? "").trim();
   const status = String(formData.get("status") ?? "").trim();
-  if (!id || (status !== "new" && status !== "contacted")) {
+  if (!id || !["new", "contacted", "enrolled"].includes(status)) {
     return;
   }
-
-  await updateLeadStatus(id, status);
+  const previous = (await listLeads()).find((lead) => lead.id === id);
+  const next = await updateLeadStatus(id, asLeadStatus(status));
   revalidatePath(leadsPath());
+  revalidatePath("/dashboard", "layout");
+  await flash(`${next.studentName} marked as ${LEAD_STATUS_LABEL[next.status].toLowerCase()}`, {
+    undo: previous ? { kind: "lead-status", id, status: previous.status } : undefined,
+  });
+}
+
+export async function undoLeadStatus(id: string, status: LeadStatus) {
+  await requireTeacher();
+  await updateLeadStatus(id, asLeadStatus(status));
+  revalidatePath(leadsPath());
+  revalidatePath("/dashboard", "layout");
 }

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { AppShell } from "@/components/layout/app-shell";
+import { TeacherShell } from "@/components/teacher/teacher-shell";
 import { logoutTeacher } from "@/lib/actions/auth";
 import { requireTeacher } from "@/lib/auth";
 
@@ -13,12 +13,11 @@ export default async function DashboardLayout({
   const teacher = await requireTeacher();
 
   return (
-    <AppShell
-      role="teacher"
-      user={{ name: teacher.name, email: teacher.email }}
+    <TeacherShell
+      teacher={{ id: teacher.id, name: teacher.name, email: teacher.email }}
       signOut={logoutTeacher}
     >
       {children}
-    </AppShell>
+    </TeacherShell>
   );
 }

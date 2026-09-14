@@ -1,5 +1,6 @@
 "use server";
 
+import { flash } from "@/lib/flash";
 import { hash } from "bcryptjs";
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -132,6 +133,7 @@ export async function createParent(
   });
   await setParentStudents(parentId, studentIds);
   revalidateParentPaths(parentId, studentIds);
+  await flash(`Parent login created for ${name}`, { description: `They sign in with ${email}.` });
   redirect(parentsPath());
 }
 
@@ -197,6 +199,7 @@ export async function updateParent(
   revalidateParentPaths(parentId, [
     ...new Set([...owned.students.map((student) => student.id), ...studentIds]),
   ]);
+  await flash(`${name} saved`);
   redirect(parentsPath());
 }
 
@@ -213,5 +216,6 @@ export async function deleteParent(formData: FormData) {
   const studentIds = owned.students.map((student) => student.id);
   await db.delete(parents).where(eq(parents.id, parentId));
   revalidateParentPaths(parentId, studentIds);
+  await flash(`${owned.name}'s parent login deleted`);
   redirect(parentsPath());
 }

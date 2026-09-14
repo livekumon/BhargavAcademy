@@ -1,5 +1,6 @@
 "use server";
 
+import { flash } from "@/lib/flash";
 import { and, eq, max } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
@@ -222,6 +223,7 @@ export async function createChapter(
 
     revalidatePath(libraryCoursePath(courseId));
     revalidatePath(coursePath(batchId, courseId));
+    await flash(`${title} added`);
     redirect(chapterPath(batchId, courseId, id));
   } catch (error) {
     unstable_rethrow(error);
@@ -276,6 +278,7 @@ export async function updateChapter(
     revalidatePath(libraryCoursePath(courseId));
     revalidatePath(coursePath(batchId, courseId));
     revalidatePath(chapterPath(batchId, courseId, chapterId));
+    await flash("Chapter saved");
     redirect(chapterPath(batchId, courseId, chapterId));
   } catch (error) {
     unstable_rethrow(error);
@@ -342,6 +345,7 @@ export async function uploadBatchMaterial(
     revalidatePath(batchPath(batchId));
     revalidatePath(coursePath(batchId, course.id));
     revalidatePath(chapterPath(batchId, course.id, chapterId));
+    await flash(`${pdf.name} uploaded`, { description: `${kindFields.kind === "assignment" ? "Assignment" : "Class material"} for ${enrolled.length} ${enrolled.length === 1 ? "student" : "students"}.` });
     return { ok: true, at: Date.now(), chapterId };
   } catch (error) {
     unstable_rethrow(error);
@@ -387,6 +391,7 @@ export async function addChapterPdf(
     );
     revalidatePath(coursePath(batchId, courseId));
     revalidatePath(chapterPath(batchId, courseId, chapterId));
+    await flash(`${pdf.name} uploaded`);
     redirect(chapterPath(batchId, courseId, chapterId));
   } catch (error) {
     unstable_rethrow(error);
@@ -449,6 +454,7 @@ export async function updateChapterPdfAssignments(
   );
   revalidatePath(coursePath(batchId, courseId));
   revalidatePath(chapterPath(batchId, courseId, chapterId));
+  await flash("Material saved");
   redirect(chapterPath(batchId, courseId, chapterId));
 }
 
@@ -481,6 +487,7 @@ export async function removeChapterPdf(
   await deleteSubmissionsForMaterials([material.id]);
   await deletePdf(material.pdfFileName);
   await db.delete(chapterMaterials).where(eq(chapterMaterials.id, material.id));
+  await flash(`${material.pdfOriginalName ?? "PDF"} removed`);
 
   revalidatePath(coursePath(batchId, courseId));
   revalidatePath(chapterPath(batchId, courseId, chapterId));
@@ -513,6 +520,7 @@ export async function deleteChapter(
 
   await deleteSharedChapter(courseId, chapterId);
   revalidatePath(coursePath(batchId, courseId));
+  await flash("Chapter deleted");
   redirect(coursePath(batchId, courseId));
 }
 
@@ -555,6 +563,7 @@ export async function createLibraryChapter(
   });
 
   revalidatePath(libraryCoursePath(courseId));
+  await flash(`${title} added`);
   redirect(libraryChapterPath(courseId, id));
 }
 
@@ -590,6 +599,7 @@ export async function updateLibraryChapter(
 
   revalidatePath(libraryCoursePath(courseId));
   revalidatePath(libraryChapterPath(courseId, chapterId));
+  await flash("Chapter saved");
   redirect(libraryChapterPath(courseId, chapterId));
 }
 
@@ -603,5 +613,6 @@ export async function deleteLibraryChapter(courseId: string, chapterId: string) 
   }
 
   await deleteSharedChapter(courseId, chapterId);
+  await flash("Chapter deleted");
   redirect(libraryCoursePath(courseId));
 }

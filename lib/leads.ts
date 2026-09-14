@@ -7,7 +7,17 @@ import {
 } from "./gcs";
 import { leads, type Lead } from "./schema";
 
-export type LeadStatus = "new" | "contacted";
+export type LeadStatus = "new" | "contacted" | "enrolled";
+
+export const LEAD_STATUS_LABEL: Record<LeadStatus, string> = {
+  new: "New",
+  contacted: "Contacted",
+  enrolled: "Enrolled",
+};
+
+export function asLeadStatus(value: unknown): LeadStatus {
+  return value === "contacted" || value === "enrolled" ? value : "new";
+}
 
 export type LeadRecord = {
   id: string;
@@ -39,7 +49,7 @@ function toRecord(lead: Lead): LeadRecord {
     className: lead.className,
     subjects: lead.subjects,
     message: lead.message,
-    status: lead.status === "contacted" ? "contacted" : "new",
+    status: asLeadStatus(lead.status),
     createdAt:
       lead.createdAt instanceof Date
         ? lead.createdAt.toISOString()
@@ -68,7 +78,7 @@ function parseStoredLead(value: unknown): LeadRecord | null {
     className: row.className,
     subjects: typeof row.subjects === "string" ? row.subjects : "",
     message: typeof row.message === "string" ? row.message : "",
-    status: row.status === "contacted" ? "contacted" : "new",
+    status: asLeadStatus(row.status),
     createdAt:
       typeof row.createdAt === "string"
         ? row.createdAt
