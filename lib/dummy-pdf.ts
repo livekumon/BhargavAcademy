@@ -1,16 +1,8 @@
-import fs from "node:fs";
-import path from "node:path";
-
 function escapePdfText(value: string) {
   return value.replaceAll("\\", "\\\\").replaceAll("(", "\\(").replaceAll(")", "\\)");
 }
 
-export function writeDummyPdf(
-  uploadsDir: string,
-  fileName: string,
-  title: string,
-  lines: string[],
-) {
+export function buildDummyPdf(title: string, lines: string[]) {
   const content = [
     "BT",
     "/F1 20 Tf",
@@ -40,18 +32,16 @@ export function writeDummyPdf(
   }
 
   const xrefOffset = "%PDF-1.4\n".length + body.length;
-  const pdf = [
-    "%PDF-1.4\n",
-    body,
-    `xref\n0 ${objects.length + 1}\n`,
-    xrefEntries.join("\n"),
-    "\n",
-    `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\n`,
-    `startxref\n${xrefOffset}\n`,
-    "%%EOF\n",
-  ].join("");
-
-  const filePath = path.join(uploadsDir, fileName);
-  fs.writeFileSync(filePath, pdf);
-  return fileName;
+  return Buffer.from(
+    [
+      "%PDF-1.4\n",
+      body,
+      `xref\n0 ${objects.length + 1}\n`,
+      xrefEntries.join("\n"),
+      "\n",
+      `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\n`,
+      `startxref\n${xrefOffset}\n`,
+      "%%EOF\n",
+    ].join(""),
+  );
 }

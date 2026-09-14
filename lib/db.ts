@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 import fs from "node:fs";
 import path from "node:path";
-import { writeDummyPdf } from "./dummy-pdf";
+import { saveDummyPdf } from "./files";
 import { EXAM_PAPERS, EXAMS, SYLLABUSES } from "./academics";
 import * as schema from "./schema";
 import {
@@ -23,10 +23,9 @@ import {
 const dataDir = process.env.VERCEL
   ? path.join("/tmp", "bhargav-academy-data")
   : path.join(process.cwd(), "data");
-const uploadsDir = path.join(dataDir, "uploads");
 const dbPath = path.join(dataDir, "academy.db");
 
-fs.mkdirSync(uploadsDir, { recursive: true });
+fs.mkdirSync(dataDir, { recursive: true });
 
 const client = createClient({
   url: `file:${dbPath}`,
@@ -36,10 +35,6 @@ export const db = drizzle(client, { schema });
 
 let initialized = false;
 let initializing: Promise<void> | null = null;
-
-export function getUploadsDir() {
-  return uploadsDir;
-}
 
 export async function ensureDatabase() {
   if (!initialized) {
@@ -262,8 +257,7 @@ async function initializeDatabase() {
       }
 
       for (const [index, material] of batch.materials.entries()) {
-        const pdfFileName = writeDummyPdf(
-          uploadsDir,
+        const pdfFileName = await saveDummyPdf(
           material.pdf,
           material.title,
           [...material.lines],
@@ -624,8 +618,7 @@ async function seedMissingDummyMaterials() {
 
       if (existing) continue;
 
-      const pdfFileName = writeDummyPdf(
-        uploadsDir,
+      const pdfFileName = await saveDummyPdf(
         material.pdf,
         material.title,
         [...material.lines],

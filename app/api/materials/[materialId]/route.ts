@@ -1,9 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import { readFile } from "node:fs/promises";
 import { getCurrentStudent, getCurrentTeacher } from "@/lib/auth";
 import { db, ensureDatabase } from "@/lib/db";
-import { getPdfPath } from "@/lib/files";
+import { readPdf } from "@/lib/files";
 import {
   batches,
   chapterMaterialAssignments,
@@ -61,7 +60,7 @@ export async function GET(
     notFound();
   }
 
-  const file = await readFile(getPdfPath(row.pdfFileName));
+  const file = await readPdf(row.pdfFileName);
   const fileName = row.pdfOriginalName ?? "material.pdf";
 
   return new Response(file, {
