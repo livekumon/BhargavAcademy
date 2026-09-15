@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isAdmin } from "@/lib/admin/policy";
+import { audit } from "@/lib/audit";
 import { requireTeacher } from "@/lib/auth";
-import { createLead, updateLeadStatus } from "@/lib/leads";
+import { createLead, getLead, updateLeadStatus } from "@/lib/leads";
 import { leadsPath } from "@/lib/paths";
 
 export type EnquiryState = {
@@ -69,14 +71,28 @@ export async function submitEnquiry(
   return { ok: true };
 }
 
+/** Teachers may only move leads the admin assigned to them. */
 export async function setLeadStatus(formData: FormData) {
-  await requireTeacher();
+  const teacher = await requireTeacher();
   const id = String(formData.get("id") ?? "").trim();
   const status = String(formData.get("status") ?? "").trim();
   if (!id || (status !== "new" && status !== "contacted")) {
     return;
   }
 
+  const lead = await getLead(id);
+  if (!lead || (lead.assignedTeacherId !== teacher.id && !isAdmin(teacher))) {
+    return;
+  }
+
   await updateLeadStatus(id, status);
+  await audit({
+    actor: { id: teacher.id, role: "teacher", name: teacher.name },
+    action: "lead.status",
+    entityType: "lead",
+    entityId: id,
+    summary: `${teacher.name} marked ${lead.studentName}'s enquiry as ${status}`,
+  });
   revalidatePath(leadsPath());
+  revalidatePath("/admin/leads");
 }

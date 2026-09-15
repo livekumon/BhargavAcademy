@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { and, asc, count, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { isAssignment } from "./materials";
 import { db, ensureDatabase } from "./db";
@@ -825,8 +826,16 @@ export async function getStudentParent(studentId: string) {
 async function getStudentProgressRows(studentId: string) {
   return db
     .select({
+      materialId: chapterMaterials.id,
+      materialName: chapterMaterials.pdfOriginalName,
+      materialPosition: chapterMaterials.position,
       kind: chapterMaterials.kind,
+      instructions: chapterMaterials.instructions,
+      hasPdf: chapterMaterials.pdfFileName,
+      assignedAt: chapterMaterialAssignments.createdAt,
       completedAt: chapterMaterialAssignments.completedAt,
+      submissionFileName: chapterMaterialAssignments.submissionFileName,
+      submissionOriginalName: chapterMaterialAssignments.submissionOriginalName,
       chapterId: chapters.id,
       chapterTitle: chapters.title,
       chapterDescription: chapters.description,
@@ -852,117 +861,175 @@ async function getStudentProgressRows(studentId: string) {
       ),
     )
     .where(eq(chapterMaterialAssignments.studentId, studentId))
-    .orderBy(asc(batches.name), asc(courses.title), asc(chapters.position));
+    .orderBy(
+      asc(batches.name),
+      asc(courses.title),
+      asc(chapters.position),
+      asc(chapterMaterials.position),
+    );
 }
 
-function groupProgressByCourse(rows: Awaited<ReturnType<typeof getStudentProgressRows>>) {
+export type ParentMaterial = {
+  id: string;
+  name: string;
+  kind: string;
+  instructions: string;
+  hasPdf: boolean;
+  assignedAt: Date;
+  completedAt: Date | null;
+  hasSubmission: boolean;
+  submissionName: string | null;
+  chapterId: string;
+  chapterTitle: string;
+  courseId: string;
+  courseTitle: string;
+  batchId: string;
+  batchName: string;
+};
+
+export type ParentChapter = {
+  id: string;
+  title: string;
+  description: string;
+  materials: ParentMaterial[];
+  progress: ReturnType<typeof summarizeProgress>;
+};
+
+export type ParentCourse = {
+  id: string;
+  title: string;
+  chapters: ParentChapter[];
+  progress: ReturnType<typeof summarizeProgress>;
+};
+
+export type ParentChildBatch = {
+  id: string;
+  name: string;
+  progress: ReturnType<typeof summarizeProgress>;
+  courses: ParentCourse[];
+};
+
+export type ParentChild = {
+  student: { id: string; name: string; syllabus: string; exam: string };
+  batches: ParentChildBatch[];
+  progress: ReturnType<typeof summarizeProgress>;
+  materials: ParentMaterial[];
+  marks: Awaited<ReturnType<typeof getStudentMarkEntries>>;
+};
+
+function toParentMaterial(
+  row: Awaited<ReturnType<typeof getStudentProgressRows>>[number],
+): ParentMaterial {
+  return {
+    id: row.materialId,
+    name: row.materialName ?? "PDF material",
+    kind: row.kind,
+    instructions: row.instructions,
+    hasPdf: Boolean(row.hasPdf),
+    assignedAt: row.assignedAt,
+    completedAt: row.completedAt,
+    hasSubmission: Boolean(row.submissionFileName),
+    submissionName: row.submissionOriginalName,
+    chapterId: row.chapterId,
+    chapterTitle: row.chapterTitle,
+    courseId: row.courseId,
+    courseTitle: row.courseTitle,
+    batchId: row.batchId,
+    batchName: row.batchName,
+  };
+}
+
+/** Rows arrive ordered by course, chapter, then material, so insertion order is display order. */
+function groupMaterialsByCourse(
+  rows: Awaited<ReturnType<typeof getStudentProgressRows>>,
+): ParentCourse[] {
   const coursesById = new Map<
     string,
-    {
-      id: string;
-      title: string;
-      chapters: {
-        id: string;
-        title: string;
-        description: string;
-        progress: ReturnType<typeof summarizeProgress>;
-      }[];
-    }
+    { id: string; title: string; chapters: Map<string, ParentChapter>; rows: typeof rows }
   >();
 
-  const rowsByChapter = new Map<string, typeof rows>();
   for (const row of rows) {
-    const key = `${row.batchId}:${row.chapterId}`;
-    const list = rowsByChapter.get(key) ?? [];
-    list.push(row);
-    rowsByChapter.set(key, list);
-  }
-
-  for (const [chapterKey, chapterRows] of rowsByChapter) {
-    const first = chapterRows[0];
-    const courseKey = `${first.batchId}:${first.courseId}`;
+    const courseKey = `${row.batchId}:${row.courseId}`;
     let course = coursesById.get(courseKey);
     if (!course) {
-      course = { id: courseKey, title: first.courseTitle, chapters: [] };
+      course = { id: courseKey, title: row.courseTitle, chapters: new Map(), rows: [] };
       coursesById.set(courseKey, course);
     }
-    course.chapters.push({
-      id: chapterKey,
-      title: first.chapterTitle,
-      description: first.chapterDescription,
-      progress: summarizeProgress(chapterRows),
-    });
+    course.rows.push(row);
+
+    const chapterKey = `${row.batchId}:${row.chapterId}`;
+    let chapter = course.chapters.get(chapterKey);
+    if (!chapter) {
+      chapter = {
+        id: chapterKey,
+        title: row.chapterTitle,
+        description: row.chapterDescription,
+        materials: [],
+        progress: summarizeProgress([]),
+      };
+      course.chapters.set(chapterKey, chapter);
+    }
+    chapter.materials.push(toParentMaterial(row));
   }
 
-  return [...coursesById.values()];
+  return [...coursesById.values()].map((course) => ({
+    id: course.id,
+    title: course.title,
+    progress: summarizeProgress(course.rows),
+    chapters: [...course.chapters.values()].map((chapter) => ({
+      ...chapter,
+      progress: summarizeProgress(chapter.materials),
+    })),
+  }));
 }
 
-export async function getParentChildren(parentId: string) {
-  await ensureDatabase();
-
-  const kids = await db
-    .select({
-      student: students,
-    })
-    .from(parentStudents)
-    .innerJoin(students, eq(parentStudents.studentId, students.id))
-    .where(eq(parentStudents.parentId, parentId))
-    .orderBy(asc(students.name));
-
-  return Promise.all(
-    kids.map(async ({ student }) => {
-      const enrollments = await getStudentEnrollments(student.id);
-      const rows = await getStudentProgressRows(student.id);
-      return {
-        student,
-        batches: enrollments.map((batch) => ({
-          id: batch.id,
-          name: batch.name,
-          progress: summarizeProgress(
-            rows.filter((row) => row.batchId === batch.id),
-          ),
-        })),
-        progress: summarizeProgress(rows),
-      };
-    }),
-  );
-}
-
-export async function getParentChildDetails(parentId: string, studentId: string) {
-  await ensureDatabase();
-
-  const [link] = await db
-    .select({ student: students })
-    .from(parentStudents)
-    .innerJoin(students, eq(parentStudents.studentId, students.id))
-    .where(
-      and(
-        eq(parentStudents.parentId, parentId),
-        eq(parentStudents.studentId, studentId),
-      ),
-    )
-    .limit(1);
-
-  if (!link) return null;
-
-  const enrollments = await getStudentEnrollments(studentId);
-  const rows = await getStudentProgressRows(studentId);
+async function getParentChild(student: typeof students.$inferSelect): Promise<ParentChild> {
+  const [enrollments, rows, marks] = await Promise.all([
+    getStudentEnrollments(student.id),
+    getStudentProgressRows(student.id),
+    getStudentMarkEntries(student.id),
+  ]);
 
   return {
-    student: link.student,
+    student: {
+      id: student.id,
+      name: student.name,
+      syllabus: student.syllabus,
+      exam: student.exam,
+    },
     batches: enrollments.map((batch) => {
       const batchRows = rows.filter((row) => row.batchId === batch.id);
       return {
         id: batch.id,
         name: batch.name,
         progress: summarizeProgress(batchRows),
-        courses: groupProgressByCourse(batchRows),
+        courses: groupMaterialsByCourse(batchRows),
       };
     }),
     progress: summarizeProgress(rows),
-    marks: await getStudentMarkEntries(studentId),
+    materials: rows.map(toParentMaterial),
+    marks,
   };
 }
+
+/**
+ * Everything the parent portal shows, for every child linked to this parent.
+ * Families are small, so one call serves both the home and child pages.
+ */
+export const getParentFamily = cache(async function getParentFamily(
+  parentId: string,
+): Promise<ParentChild[]> {
+  await ensureDatabase();
+
+  const kids = await db
+    .select({ student: students })
+    .from(parentStudents)
+    .innerJoin(students, eq(parentStudents.studentId, students.id))
+    .where(eq(parentStudents.parentId, parentId))
+    .orderBy(asc(students.name));
+
+  return Promise.all(kids.map(({ student }) => getParentChild(student)));
+});
 
 export async function getStudentMarkEntries(studentId: string) {
   await ensureDatabase();

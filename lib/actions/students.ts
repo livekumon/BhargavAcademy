@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireTeacher } from "@/lib/auth";
 import { db, ensureDatabase, nextAcademyEmail } from "@/lib/db";
-import { deletePdf } from "@/lib/files";
+import { enrollInBatch, unenrollFromBatch } from "@/lib/enrolments";
 import { resolveAccountPassword } from "@/lib/identity";
 import { batchPath, parentChildPath, studentsPath, studentManagePath } from "@/lib/paths";
 import { parseOption } from "@/lib/academics";
@@ -18,8 +18,6 @@ import {
 import { hash } from "bcryptjs";
 import {
   batches,
-  chapterMaterialAssignments,
-  chapterMaterials,
   parents,
   parentStudents,
   studentBatches,
@@ -68,79 +66,6 @@ async function studentOwnedByTeacher(teacherId: string, studentId: string) {
     .limit(1);
 
   return Boolean(row);
-}
-
-async function enrollInBatch(studentId: string, batchId: string) {
-  await db
-    .insert(studentBatches)
-    .values({
-      id: crypto.randomUUID(),
-      studentId,
-      batchId,
-      createdAt: new Date(),
-    })
-    .onConflictDoNothing();
-}
-
-async function unenrollFromBatch(studentId: string, batchId: string) {
-  const assignments = await db
-    .select({
-      id: chapterMaterialAssignments.id,
-      submissionFileName: chapterMaterialAssignments.submissionFileName,
-    })
-    .from(chapterMaterialAssignments)
-    .innerJoin(
-      chapterMaterials,
-      eq(chapterMaterialAssignments.materialId, chapterMaterials.id),
-    )
-    .where(
-      and(
-        eq(chapterMaterialAssignments.studentId, studentId),
-        eq(chapterMaterials.batchId, batchId),
-      ),
-    );
-
-  await Promise.all(
-    assignments.map((row) => deletePdf(row.submissionFileName)),
-  );
-
-  for (const row of assignments) {
-    await db
-      .delete(chapterMaterialAssignments)
-      .where(eq(chapterMaterialAssignments.id, row.id));
-  }
-
-  await db
-    .delete(studentBatches)
-    .where(
-      and(
-        eq(studentBatches.studentId, studentId),
-        eq(studentBatches.batchId, batchId),
-      ),
-    );
-
-  const remaining = await db
-    .select({ batchId: studentBatches.batchId })
-    .from(studentBatches)
-    .where(eq(studentBatches.studentId, studentId));
-
-  if (remaining.length === 0) {
-    await db.delete(students).where(eq(students.id, studentId));
-    return;
-  }
-
-  const [student] = await db
-    .select({ batchId: students.batchId })
-    .from(students)
-    .where(eq(students.id, studentId))
-    .limit(1);
-
-  if (student && student.batchId === batchId) {
-    await db
-      .update(students)
-      .set({ batchId: remaining[0].batchId })
-      .where(eq(students.id, studentId));
-  }
 }
 
 function safeNext(value: unknown) {

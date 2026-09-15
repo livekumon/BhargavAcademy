@@ -8,6 +8,13 @@ export const teachers = sqliteTable("teachers", {
   mustChangePassword: integer("must_change_password", { mode: "boolean" })
     .notNull()
     .default(true),
+  /** "teacher" | "admin". Read through effectiveRole(), which honours expiry. */
+  role: text("role").notNull().default("teacher"),
+  /** Null means a permanent grant. */
+  roleExpiresAt: integer("role_expires_at", { mode: "timestamp" }),
+  roleGrantedBy: text("role_granted_by"),
+  status: text("status").notNull().default("active"),
+  lastLoginAt: integer("last_login_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 
@@ -36,6 +43,8 @@ export const students = sqliteTable("students", {
     .default(true),
   syllabus: text("syllabus").notNull().default(""),
   exam: text("exam").notNull().default(""),
+  status: text("status").notNull().default("active"),
+  lastLoginAt: integer("last_login_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 
@@ -127,6 +136,8 @@ export const parents = sqliteTable("parents", {
   mustChangePassword: integer("must_change_password", { mode: "boolean" })
     .notNull()
     .default(true),
+  status: text("status").notNull().default("active"),
+  lastLoginAt: integer("last_login_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 
@@ -216,6 +227,21 @@ export const leads = sqliteTable("leads", {
   subjects: text("subjects").notNull().default(""),
   message: text("message").notNull().default(""),
   status: text("status").notNull().default("new"),
+  assignedTeacherId: text("assigned_teacher_id"),
+  contactedAt: integer("contacted_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+});
+
+export const auditEvents = sqliteTable("audit_events", {
+  id: text("id").primaryKey(),
+  actorId: text("actor_id"),
+  actorRole: text("actor_role").notNull(),
+  actorName: text("actor_name").notNull().default(""),
+  action: text("action").notNull(),
+  entityType: text("entity_type"),
+  entityId: text("entity_id"),
+  summary: text("summary").notNull(),
+  metadata: text("metadata"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 
@@ -233,3 +259,4 @@ export type StudentChapterMark = typeof studentChapterMarks.$inferSelect;
 export type StudentMarkChapter = typeof studentMarkChapters.$inferSelect;
 export type LookupOption = typeof lookupOptions.$inferSelect;
 export type Lead = typeof leads.$inferSelect;
+export type AuditEvent = typeof auditEvents.$inferSelect;

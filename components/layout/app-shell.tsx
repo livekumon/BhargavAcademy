@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
-import { AppNav, type AppRole } from "./app-nav"
+import { cn } from "cn"
+import { AppNav, type AppRole, type PortalSwitch } from "./app-nav"
 import { Container } from "./container"
 
 /**
@@ -11,17 +12,36 @@ export function AppShell({
   role,
   user,
   signOut,
+  switchPortal,
   children,
 }: {
   role: AppRole
   user: { name: string; email: string }
   signOut: () => Promise<void>
+  /** Shown in the account menu, e.g. an admin moving between console and teaching. */
+  switchPortal?: PortalSwitch
   children: ReactNode
 }) {
+  // Students get a fixed bottom tab bar on phones (see app-nav). Leave room for
+  // it, and keep keyboard focus from scrolling underneath it (WCAG 2.2 · 2.4.11).
+  const tabBar = role === "student"
+
   return (
-    <div data-role={role} className="flex min-h-full flex-1 flex-col bg-canvas">
-      <AppNav role={role} user={user} signOut={signOut} />
-      <main id="main" className="flex-1 py-8 sm:py-10">
+    <div
+      data-role={role}
+      className={cn(
+        "flex min-h-full flex-1 flex-col bg-canvas",
+        tabBar && "[html:has(&)]:scroll-pt-20 [html:has(&)]:scroll-pb-24 md:[html:has(&)]:scroll-pb-0"
+      )}
+    >
+      <AppNav role={role} user={user} signOut={signOut} switchPortal={switchPortal} />
+      <main
+        id="main"
+        className={cn(
+          "flex-1 py-8 sm:py-10",
+          tabBar && "pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-10"
+        )}
+      >
         <Container width="xl">{children}</Container>
       </main>
     </div>

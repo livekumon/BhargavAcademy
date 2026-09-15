@@ -1,19 +1,25 @@
 import { Inbox, Phone } from "lucide-react";
 import { setLeadStatus } from "@/lib/actions/leads";
 import { formatDateTime } from "@/lib/dates";
-import type { LeadRecord } from "@/lib/leads";
+import { LEAD_STATUS_LABELS, type LeadRecord } from "@/lib/leads";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Surface } from "@/components/ui/surface";
 
-export function LeadsInbox({ leads }: { leads: LeadRecord[] }) {
+export function LeadsInbox({
+  leads,
+  emptyDescription = "When a parent submits the enroll form on the website, it will show up here.",
+}: {
+  leads: LeadRecord[];
+  emptyDescription?: string;
+}) {
   if (leads.length === 0) {
     return (
       <EmptyState
         icon={<Inbox />}
         title="No enquiries yet"
-        description="When a parent submits the enroll form on the website, it will show up here."
+        description={emptyDescription}
       />
     );
   }
@@ -38,10 +44,10 @@ export function LeadsInbox({ leads }: { leads: LeadRecord[] }) {
                 </p>
               </div>
               <StatusPill
-                tone={lead.status === "contacted" ? "success" : "highlight"}
+                tone={lead.status === "new" ? "highlight" : "success"}
                 dot
               >
-                {lead.status === "contacted" ? "Contacted" : "New"}
+                {LEAD_STATUS_LABELS[lead.status]}
               </StatusPill>
             </div>
 
@@ -82,19 +88,21 @@ export function LeadsInbox({ leads }: { leads: LeadRecord[] }) {
               </p>
             ) : null}
 
-            <form action={setLeadStatus}>
-              <input type="hidden" name="id" value={lead.id} />
-              <input
-                type="hidden"
-                name="status"
-                value={lead.status === "contacted" ? "new" : "contacted"}
-              />
-              <Button type="submit" variant="outline" size="sm">
-                {lead.status === "contacted"
-                  ? "Mark as new"
-                  : "Mark as contacted"}
-              </Button>
-            </form>
+            {lead.status === "new" || lead.status === "contacted" ? (
+              <form action={setLeadStatus}>
+                <input type="hidden" name="id" value={lead.id} />
+                <input
+                  type="hidden"
+                  name="status"
+                  value={lead.status === "contacted" ? "new" : "contacted"}
+                />
+                <Button type="submit" variant="outline" size="sm">
+                  {lead.status === "contacted"
+                    ? "Mark as new"
+                    : "Mark as contacted"}
+                </Button>
+              </form>
+            ) : null}
           </Surface>
         ))}
       </div>
