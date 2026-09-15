@@ -3,6 +3,7 @@ import { AuthHeading } from "@/components/auth/auth-heading";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { AuthShowcase } from "@/components/auth/auth-showcase";
 import { RoleSwitcher } from "@/components/auth/role-switcher";
+import { SignedOutNotice } from "@/components/auth/signed-out-notice";
 import { AuthForm } from "@/components/auth-form";
 import { loginStudent } from "@/lib/actions/auth";
 import { SAMPLE_STUDENT_EMAIL, SAMPLE_STUDENT_PASSWORD } from "@/lib/seed";
@@ -11,7 +12,13 @@ export const metadata: Metadata = {
   title: "Student sign in",
 };
 
-export default function StudentLoginPage() {
+export default async function StudentLoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ notice?: string | string[] }>;
+}) {
+  const { notice } = await searchParams;
+
   return (
     <AuthShell role="student" showcase={<AuthShowcase variant="student" />}>
       <div className="space-y-8">
@@ -20,6 +27,7 @@ export default function StudentLoginPage() {
           title="Ready to learn?"
           description="Sign in to see what to revise, what to submit, and your latest marks."
         />
+        <SignedOutNotice notice={notice} />
         <AuthForm
           action={loginStudent}
           mode="login"
