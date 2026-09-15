@@ -4,7 +4,7 @@
 
 export const FLASH_COOKIE = "ba_flash";
 
-export type FlashUndo = { kind: "lead-status"; id: string; status: "new" | "contacted" | "enrolled" };
+export type FlashUndo = { kind: "lead-status"; id: string; status: string };
 
 export type Flash = {
   id: string;

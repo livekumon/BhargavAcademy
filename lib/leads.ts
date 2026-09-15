@@ -1,4 +1,5 @@
 import { desc, eq } from "drizzle-orm";
+import { LEAD_STAGE_LABELS, isLeadStage, type LeadStage } from "./admin/policy";
 import { db, ensureDatabase } from "./db";
 import {
   isGcsConfigured,
@@ -7,16 +8,14 @@ import {
 } from "./gcs";
 import { leads, type Lead } from "./schema";
 
-export type LeadStatus = "new" | "contacted" | "enrolled";
+export type LeadStatus = LeadStage;
 
-export const LEAD_STATUS_LABEL: Record<LeadStatus, string> = {
-  new: "New",
-  contacted: "Contacted",
-  enrolled: "Enrolled",
-};
+export const LEAD_STATUS_LABELS = LEAD_STAGE_LABELS;
+/** Singular alias used by the teacher screens. */
+export const LEAD_STATUS_LABEL = LEAD_STAGE_LABELS;
 
 export function asLeadStatus(value: unknown): LeadStatus {
-  return value === "contacted" || value === "enrolled" ? value : "new";
+  return isLeadStage(value) ? value : "new";
 }
 
 export type LeadRecord = {
@@ -28,6 +27,8 @@ export type LeadRecord = {
   subjects: string;
   message: string;
   status: LeadStatus;
+  assignedTeacherId: string | null;
+  contactedAt: string | null;
   notes: string;
   createdAt: string;
 };
@@ -41,6 +42,12 @@ type LeadInput = {
   message: string;
 };
 
+function toIso(value: Date | number | string | null | undefined) {
+  if (value === null || value === undefined) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
 function toRecord(lead: Lead): LeadRecord {
   return {
     id: lead.id,
@@ -50,12 +57,11 @@ function toRecord(lead: Lead): LeadRecord {
     className: lead.className,
     subjects: lead.subjects,
     message: lead.message,
-    status: asLeadStatus(lead.status),
+    status: isLeadStage(lead.status) ? lead.status : "new",
+    assignedTeacherId: lead.assignedTeacherId ?? null,
+    contactedAt: toIso(lead.contactedAt),
     notes: lead.notes ?? "",
-    createdAt:
-      lead.createdAt instanceof Date
-        ? lead.createdAt.toISOString()
-        : new Date(lead.createdAt).toISOString(),
+    createdAt: toIso(lead.createdAt) ?? new Date().toISOString(),
   };
 }
 
@@ -80,7 +86,10 @@ function parseStoredLead(value: unknown): LeadRecord | null {
     className: row.className,
     subjects: typeof row.subjects === "string" ? row.subjects : "",
     message: typeof row.message === "string" ? row.message : "",
-    status: asLeadStatus(row.status),
+    status: isLeadStage(row.status) ? row.status : "new",
+    assignedTeacherId:
+      typeof row.assignedTeacherId === "string" ? row.assignedTeacherId : null,
+    contactedAt: typeof row.contactedAt === "string" ? row.contactedAt : null,
     notes: typeof row.notes === "string" ? row.notes : "",
     createdAt:
       typeof row.createdAt === "string"
@@ -100,6 +109,8 @@ export async function createLead(input: LeadInput): Promise<LeadRecord> {
     subjects: input.subjects,
     message: input.message,
     status: "new",
+    assignedTeacherId: null,
+    contactedAt: null,
     notes: "",
     createdAt: new Date().toISOString(),
   };
@@ -113,6 +124,8 @@ export async function createLead(input: LeadInput): Promise<LeadRecord> {
     subjects: record.subjects,
     message: record.message,
     status: record.status,
+    assignedTeacherId: null,
+    contactedAt: null,
     createdAt: new Date(record.createdAt),
   });
 
@@ -123,6 +136,7 @@ export async function createLead(input: LeadInput): Promise<LeadRecord> {
   return record;
 }
 
+/** Every lead, newest first. Admin-only callers. */
 export async function listLeads(): Promise<LeadRecord[]> {
   if (isGcsConfigured()) {
     const stored = await listLeadJsonFromGcs<unknown>();
@@ -137,35 +151,83 @@ export async function listLeads(): Promise<LeadRecord[]> {
   return rows.map(toRecord);
 }
 
-async function findLead(id: string) {
+/** The leads an admin has handed to one teacher. */
+export async function listLeadsForTeacher(teacherId: string) {
+  const all = await listLeads();
+  return all.filter((lead) => lead.assignedTeacherId === teacherId);
+}
+
+export async function getLead(id: string) {
   await ensureDatabase();
   const [existing] = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
-  let record: LeadRecord | null = existing ? toRecord(existing) : null;
-  if (!record && isGcsConfigured()) {
-    const stored = await listLeads();
-    record = stored.find((lead) => lead.id === id) ?? null;
-  }
+  if (existing) return toRecord(existing);
+  if (!isGcsConfigured()) return null;
+  const stored = await listLeads();
+  return stored.find((lead) => lead.id === id) ?? null;
+}
+
+export type LeadPatch = {
+  status?: LeadStatus;
+  assignedTeacherId?: string | null;
+  notes?: string;
+};
+
+export async function updateLead(id: string, patch: LeadPatch) {
+  const record = await getLead(id);
   if (!record) {
     throw new Error("Lead not found.");
   }
-  return record;
-}
 
-/** Updates the local row and, when configured, the durable copy in Cloud Storage. */
-async function saveLead(next: LeadRecord) {
-  await db.update(leads).set({ status: next.status, notes: next.notes }).where(eq(leads.id, next.id));
-  if (isGcsConfigured()) {
-    await saveLeadJsonToGcs(next.id, next);
+  const next: LeadRecord = { ...record };
+  if (patch.status) {
+    next.status = patch.status;
+    // The first move out of "new" is when the parent was first called back.
+    if (patch.status !== "new" && !next.contactedAt) {
+      next.contactedAt = new Date().toISOString();
+    }
   }
+  if (patch.assignedTeacherId !== undefined) {
+    next.assignedTeacherId = patch.assignedTeacherId;
+  }
+  if (patch.notes !== undefined) {
+    next.notes = patch.notes.slice(0, 2000);
+  }
+
+  const [existing] = await db.select({ id: leads.id }).from(leads).where(eq(leads.id, id)).limit(1);
+  const values = {
+    status: next.status,
+    assignedTeacherId: next.assignedTeacherId,
+    contactedAt: next.contactedAt ? new Date(next.contactedAt) : null,
+    notes: next.notes,
+  };
+  if (existing) {
+    await db.update(leads).set(values).where(eq(leads.id, id));
+  } else {
+    // Stored only in GCS (the local database was reset); keep both in step.
+    await db.insert(leads).values({
+      ...values,
+      id: next.id,
+      parentName: next.parentName,
+      studentName: next.studentName,
+      phone: next.phone,
+      className: next.className,
+      subjects: next.subjects,
+      message: next.message,
+      createdAt: new Date(next.createdAt),
+    });
+  }
+
+  if (isGcsConfigured()) {
+    await saveLeadJsonToGcs(id, next);
+  }
+
   return next;
 }
 
 export async function updateLeadStatus(id: string, status: LeadStatus) {
-  const record = await findLead(id);
-  return saveLead({ ...record, status });
+  return updateLead(id, { status });
 }
 
 export async function updateLeadNotes(id: string, notes: string) {
-  const record = await findLead(id);
-  return saveLead({ ...record, notes: notes.slice(0, 2000) });
+  return updateLead(id, { notes });
 }

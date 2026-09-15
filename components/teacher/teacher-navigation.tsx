@@ -10,6 +10,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Search,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "cn";
 import { Logo, LogoMark } from "@/components/logo";
@@ -28,6 +29,7 @@ import { teacherNav, type TeacherNavItem } from "./nav";
 export const SIDEBAR_COOKIE = "ba_sidebar";
 
 type Badges = { leads: number };
+type PortalSwitch = { href: string; label: string };
 type User = { name: string; email: string };
 
 function initials(name: string) {
@@ -73,11 +75,13 @@ function AccountMenu({
   signOut,
   collapsed,
   side = "top",
+  switchPortal,
 }: {
   user: User;
   signOut: () => Promise<void>;
   collapsed?: boolean;
   side?: "top" | "bottom";
+  switchPortal?: PortalSwitch;
 }) {
   return (
     <DropdownMenu>
@@ -108,8 +112,16 @@ function AccountMenu({
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {switchPortal ? (
+          <DropdownMenuItem asChild className="gap-2 p-2">
+            <Link href={switchPortal.href}>
+              <ShieldCheck aria-hidden="true" />
+              {switchPortal.label}
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem asChild className="gap-2 p-2">
-          <Link href="/dashboard/settings?section=account">
+          <Link href="/dashboard/settings">
             <KeyRound aria-hidden="true" />
             Account and password
           </Link>
@@ -180,11 +192,13 @@ export function TeacherSidebar({
   user,
   signOut,
   badges,
+  switchPortal,
   defaultCollapsed,
 }: {
   user: User;
   signOut: () => Promise<void>;
   badges: Badges;
+  switchPortal?: PortalSwitch;
   defaultCollapsed: boolean;
 }) {
   const pathname = usePathname();
@@ -264,7 +278,7 @@ export function TeacherSidebar({
       </nav>
 
       <div className="mt-4 flex flex-col gap-1 border-t border-line pt-3">
-        <AccountMenu user={user} signOut={signOut} collapsed={collapsed} />
+        <AccountMenu user={user} signOut={signOut} collapsed={collapsed} switchPortal={switchPortal} />
         <button
           type="button"
           onClick={toggle}
@@ -295,10 +309,12 @@ export function TeacherMobileNav({
   user,
   signOut,
   badges,
+  switchPortal,
 }: {
   user: User;
   signOut: () => Promise<void>;
   badges: Badges;
+  switchPortal?: PortalSwitch;
 }) {
   const pathname = usePathname();
   const items = teacherNav.flatMap((group) => group.items);
@@ -322,7 +338,7 @@ export function TeacherMobileNav({
           <span className="sr-only">Search</span>
         </button>
         <div className="w-10">
-          <AccountMenu user={user} signOut={signOut} collapsed side="bottom" />
+          <AccountMenu user={user} signOut={signOut} collapsed side="bottom" switchPortal={switchPortal} />
         </div>
       </header>
 

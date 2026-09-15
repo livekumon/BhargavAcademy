@@ -3,6 +3,7 @@ import { AuthHeading } from "@/components/auth/auth-heading";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { AuthShowcase } from "@/components/auth/auth-showcase";
 import { RoleSwitcher } from "@/components/auth/role-switcher";
+import { SignedOutNotice } from "@/components/auth/signed-out-notice";
 import { AuthForm } from "@/components/auth-form";
 import { loginParent } from "@/lib/actions/auth";
 import { SAMPLE_PARENT_EMAIL, SAMPLE_PARENT_PASSWORD } from "@/lib/seed";
@@ -11,7 +12,13 @@ export const metadata: Metadata = {
   title: "Parent sign in",
 };
 
-export default function ParentLoginPage() {
+export default async function ParentLoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ notice?: string | string[] }>;
+}) {
+  const { notice } = await searchParams;
+
   return (
     <AuthShell role="parent" showcase={<AuthShowcase variant="parent" />}>
       <div className="space-y-8">
@@ -20,6 +27,7 @@ export default function ParentLoginPage() {
           title="Welcome back"
           description="Sign in to follow your children's class material, assignments, and marks."
         />
+        <SignedOutNotice notice={notice} />
         <AuthForm
           action={loginParent}
           mode="login"

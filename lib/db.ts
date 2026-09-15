@@ -25,16 +25,32 @@ import {
   PROTOTYPE_EVENING_BATCH_ID,
 } from "./seed";
 
-const dataDir = process.env.VERCEL
-  ? path.join("/tmp", "bhargav-academy-data")
-  : path.join(process.cwd(), "data");
-const dbPath = path.join(dataDir, "academy.db");
+/*
+ * A hosted libSQL database (Turso) when TURSO_DATABASE_URL is set. Without it
+ * the app falls back to a local SQLite file, which on Vercel lives in /tmp and
+ * is wiped on every cold start — fine for a demo, not for real accounts.
+ */
+function createDatabaseClient() {
+  const remoteUrl = process.env.TURSO_DATABASE_URL?.trim();
+  if (remoteUrl) {
+    return createClient({
+      url: remoteUrl,
+      authToken: process.env.TURSO_AUTH_TOKEN?.trim() || undefined,
+    });
+  }
 
-fs.mkdirSync(dataDir, { recursive: true });
+  const dataDir = process.env.VERCEL
+    ? path.join("/tmp", "bhargav-academy-data")
+    : path.join(process.cwd(), "data");
+  fs.mkdirSync(dataDir, { recursive: true });
+  return createClient({ url: `file:${path.join(dataDir, "academy.db")}` });
+}
 
-const client = createClient({
-  url: `file:${dbPath}`,
-});
+/** False only on Vercel without Turso, where every cold start resets the data. */
+export const isPersistentDatabase =
+  Boolean(process.env.TURSO_DATABASE_URL?.trim()) || !process.env.VERCEL;
+
+const client = createDatabaseClient();
 
 export const db = drizzle(client, { schema });
 
@@ -79,6 +95,8 @@ async function runEnsureDatabase() {
   await ensureLookupSchema();
   await ensureLeadsSchema();
   await ensureMustChangePasswordSchema();
+  await ensureAdminSchema();
+  await ensureOwnerAdmin();
   await ensureLeadNotesColumn();
 }
 
@@ -170,6 +188,9 @@ async function initializeDatabase() {
   await createAssignmentTable();
   await createParentTables();
   await createStudentBatchTable();
+  // Drizzle names every schema column in its queries, so the admin columns
+  // must exist before the first select or insert below touches these tables.
+  await ensureAdminSchema();
   await ensureMustChangePasswordSchema();
 
   const existing = await db
@@ -1167,10 +1188,85 @@ async function ensureLeadsSchema() {
       subjects TEXT NOT NULL DEFAULT '',
       message TEXT NOT NULL DEFAULT '',
       status TEXT NOT NULL DEFAULT 'new',
+      assigned_teacher_id TEXT,
+      contacted_at INTEGER,
       notes TEXT NOT NULL DEFAULT '',
       created_at INTEGER NOT NULL
     )
   `);
+  await addMissingColumns("leads", [
+    ["assigned_teacher_id", "TEXT"],
+    ["contacted_at", "INTEGER"],
+  ]);
+}
+
+async function addMissingColumns(table: string, columns: [name: string, definition: string][]) {
+  const info = await client.execute(`PRAGMA table_info(${table})`);
+  if (info.rows.length === 0) return false;
+  const existing = new Set(info.rows.map((row) => String(row.name)));
+  for (const [name, definition] of columns) {
+    if (!existing.has(name)) {
+      await client.execute(`ALTER TABLE ${table} ADD COLUMN ${name} ${definition}`);
+    }
+  }
+  return true;
+}
+
+let adminSchemaReady = false;
+
+/** Roles, account status, last sign-in, and the activity log. Idempotent. */
+async function ensureAdminSchema() {
+  if (adminSchemaReady) return;
+
+  const accountColumns: [string, string][] = [
+    ["status", "TEXT NOT NULL DEFAULT 'active'"],
+    ["last_login_at", "INTEGER"],
+  ];
+  const ready = [
+    await addMissingColumns("teachers", [
+      ["role", "TEXT NOT NULL DEFAULT 'teacher'"],
+      ["role_expires_at", "INTEGER"],
+      ["role_granted_by", "TEXT"],
+      ...accountColumns,
+    ]),
+    await addMissingColumns("students", accountColumns),
+    await addMissingColumns("parents", accountColumns),
+  ];
+
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS audit_events (
+      id TEXT PRIMARY KEY,
+      actor_id TEXT,
+      actor_role TEXT NOT NULL,
+      actor_name TEXT NOT NULL DEFAULT '',
+      action TEXT NOT NULL,
+      entity_type TEXT,
+      entity_id TEXT,
+      summary TEXT NOT NULL,
+      metadata TEXT,
+      created_at INTEGER NOT NULL
+    )
+  `);
+  await client.execute(
+    "CREATE INDEX IF NOT EXISTS audit_events_created ON audit_events(created_at)",
+  );
+
+  // A table created later in the boot sequence gets its columns on the next pass.
+  adminSchemaReady = ready.every(Boolean);
+}
+
+let ownerAdminReady = false;
+
+/** The founder account is always an active, permanent admin. */
+async function ensureOwnerAdmin() {
+  if (ownerAdminReady) return;
+  await client.execute({
+    sql: `UPDATE teachers SET role = 'admin', role_expires_at = NULL, status = 'active'
+          WHERE lower(email) = ?
+            AND (role != 'admin' OR role_expires_at IS NOT NULL OR status != 'active')`,
+    args: [ADMIN_EMAIL],
+  });
+  ownerAdminReady = true;
 }
 
 let passwordSchemaReady = false;

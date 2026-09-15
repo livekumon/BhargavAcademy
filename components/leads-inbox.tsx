@@ -9,10 +9,12 @@ import { saveLeadNotes, setLeadStatus } from "@/lib/actions/leads";
 import { LEAD_STATUS_LABEL, type LeadRecord, type LeadStatus } from "@/lib/leads";
 import { relativeDay, whatsappNumber } from "@/lib/teacher-format";
 
-const tones: Record<LeadStatus, "highlight" | "info" | "success"> = {
+const tones: Record<LeadStatus, "highlight" | "info" | "success" | "brand" | "neutral"> = {
   new: "highlight",
   contacted: "info",
+  demo: "brand",
   enrolled: "success",
+  closed: "neutral",
 };
 
 function StatusButton({ lead, to, label, icon: Icon, primary = false }: {
@@ -39,22 +41,26 @@ function StatusButton({ lead, to, label, icon: Icon, primary = false }: {
  * Each card has one-tap Call and WhatsApp, and turning a lead into a student
  * pre-fills the new-student form and closes the lead.
  */
-export function LeadsInbox({ leads, status }: { leads: LeadRecord[]; status: LeadStatus | "all" }) {
+export function LeadsInbox({
+  leads,
+  status,
+  emptyDescription = "When a parent submits the enroll form on bhargavacademy.com, it lands here so you can call them back.",
+}: {
+  leads: LeadRecord[];
+  status: LeadStatus | "all";
+  emptyDescription?: string;
+}) {
   if (leads.length === 0) {
     return (
       <EmptyState
         icon={<Inbox />}
         title="No enquiries yet"
-        description="When a parent submits the enroll form on bhargavacademy.com, it lands here so you can call them back."
+        description={emptyDescription}
       />
     );
   }
 
-  const counts = {
-    new: leads.filter((lead) => lead.status === "new").length,
-    contacted: leads.filter((lead) => lead.status === "contacted").length,
-    enrolled: leads.filter((lead) => lead.status === "enrolled").length,
-  };
+  const count = (stage: LeadStatus) => leads.filter((lead) => lead.status === stage).length;
   const visible = status === "all" ? leads : leads.filter((lead) => lead.status === status);
 
   return (
@@ -63,9 +69,11 @@ export function LeadsInbox({ leads, status }: { leads: LeadRecord[]; status: Lea
         label="Lead status"
         current={status}
         chips={[
-          { id: "new", label: "New", href: "/dashboard/leads", count: counts.new },
-          { id: "contacted", label: "Contacted", href: "/dashboard/leads?status=contacted", count: counts.contacted },
-          { id: "enrolled", label: "Enrolled", href: "/dashboard/leads?status=enrolled", count: counts.enrolled },
+          { id: "new", label: "New", href: "/dashboard/leads", count: count("new") },
+          { id: "contacted", label: "Contacted", href: "/dashboard/leads?status=contacted", count: count("contacted") },
+          { id: "demo", label: "Demo", href: "/dashboard/leads?status=demo", count: count("demo") },
+          { id: "enrolled", label: "Enrolled", href: "/dashboard/leads?status=enrolled", count: count("enrolled") },
+          { id: "closed", label: "Closed", href: "/dashboard/leads?status=closed", count: count("closed") },
           { id: "all", label: "All", href: "/dashboard/leads?status=all", count: leads.length },
         ]}
       />
@@ -172,7 +180,7 @@ export function LeadsInbox({ leads, status }: { leads: LeadRecord[]; status: Lea
                     {lead.status === "new" ? (
                       <StatusButton lead={lead} to="contacted" label="Mark contacted" icon={CheckCheck} />
                     ) : null}
-                    {lead.status !== "enrolled" ? (
+                    {lead.status === "closed" ? null : lead.status !== "enrolled" ? (
                       <Button asChild size="lg">
                         <Link href={addAsStudent}>
                           <UserPlus data-icon="inline-start" />
@@ -182,7 +190,7 @@ export function LeadsInbox({ leads, status }: { leads: LeadRecord[]; status: Lea
                     ) : (
                       <StatusButton lead={lead} to="contacted" label="Not enrolled" icon={RotateCcw} />
                     )}
-                    {lead.status === "contacted" ? (
+                    {lead.status === "contacted" || lead.status === "demo" ? (
                       <StatusButton lead={lead} to="new" label="Back to new" icon={RotateCcw} />
                     ) : null}
                     {lead.status === "enrolled" ? (

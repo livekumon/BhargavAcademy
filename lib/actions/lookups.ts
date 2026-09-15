@@ -3,7 +3,7 @@
 import { flash } from "@/lib/flash";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { requireTeacher } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { db, ensureDatabase } from "@/lib/db";
 import { isLookupListKey, slugifyLookupValue } from "@/lib/lookup-lists";
 import {
@@ -20,15 +20,17 @@ export type LookupState = {
 
 function revalidateLookupPaths() {
   revalidatePath("/dashboard", "layout");
+  revalidatePath("/admin", "layout");
   revalidatePath("/student", "layout");
   revalidatePath("/parent", "layout");
 }
 
+/** Dropdown lists are academy-wide, so only admins may change them. */
 export async function mutateLookup(
   _prev: LookupState,
   formData: FormData,
 ): Promise<LookupState> {
-  await requireTeacher();
+  await requireAdmin();
   await ensureDatabase();
 
   const intent = String(formData.get("intent") ?? "").trim();
