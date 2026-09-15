@@ -15,7 +15,12 @@ export function proxy(request: NextRequest) {
   );
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/dashboard") && !hasTeacherSession) {
+  // Admins sign in through the teacher door. This only checks that a cookie
+  // exists; the admin role itself is verified by requireAdmin on every page.
+  if (
+    (pathname.startsWith("/dashboard") || pathname.startsWith("/admin")) &&
+    !hasTeacherSession
+  ) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
@@ -55,6 +60,8 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/dashboard/:path*",
+    "/admin",
+    "/admin/:path*",
     "/login",
     "/register",
     "/student",

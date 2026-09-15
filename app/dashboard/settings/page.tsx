@@ -6,6 +6,7 @@ import { SetPasswordForm } from "@/components/set-password-form";
 import { AccountNameForm } from "@/components/teacher/account-name-form";
 import { PageTabs } from "@/components/teacher/page-tabs";
 import { Surface } from "@/components/ui/surface";
+import { isAdmin } from "@/lib/admin/policy";
 import { changeTeacherPassword } from "@/lib/actions/auth";
 import { requireTeacher } from "@/lib/auth";
 import { getLookupCatalog } from "@/lib/lookups";
@@ -21,23 +22,31 @@ export default async function SettingsPage({
   searchParams: Promise<{ section?: string | string[] }>;
 }) {
   const [teacher, query] = await Promise.all([requireTeacher(), searchParams]);
-  const section = firstQueryValue(query.section) === "account" ? "account" : "lists";
+  // Dropdown lists are academy-wide, so only admins can edit them.
+  const canEditLists = isAdmin(teacher);
+  const section = !canEditLists || firstQueryValue(query.section) === "account" ? "account" : "lists";
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         eyebrow="Academy"
         title="Settings"
-        description="The dropdown lists every portal uses, and your own account."
+        description={
+          canEditLists
+            ? "The dropdown lists every portal uses, and your own account."
+            : "Your name and password. Academy-wide lists are managed by the admin."
+        }
       />
-      <PageTabs
-        label="Settings sections"
-        current={section}
-        tabs={[
-          { id: "lists", label: "Dropdown lists", href: "/dashboard/settings", icon: ListChecks },
-          { id: "account", label: "Your account", href: "/dashboard/settings?section=account", icon: UserRound },
-        ]}
-      />
+      {canEditLists ? (
+        <PageTabs
+          label="Settings sections"
+          current={section}
+          tabs={[
+            { id: "lists", label: "Dropdown lists", href: "/dashboard/settings", icon: ListChecks },
+            { id: "account", label: "Your account", href: "/dashboard/settings?section=account", icon: UserRound },
+          ]}
+        />
+      ) : null}
 
       {section === "lists" ? (
         <ListsSection />

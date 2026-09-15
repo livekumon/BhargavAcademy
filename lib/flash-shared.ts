@@ -2,9 +2,11 @@
  * Client-safe half of the flash-message helpers. See lib/flash.ts.
  */
 
+import type { LeadStage } from "./admin/policy";
+
 export const FLASH_COOKIE = "ba_flash";
 
-export type FlashUndo = { kind: "lead-status"; id: string; status: "new" | "contacted" | "enrolled" };
+export type FlashUndo = { kind: "lead-status"; id: string; status: LeadStage };
 
 export type Flash = {
   id: string;

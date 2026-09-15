@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { isAdmin } from "./admin/policy";
 import { db, ensureDatabase } from "./db";
 import { parents, students, teachers, type Parent, type Student, type Teacher } from "./schema";
 import {
@@ -87,15 +88,50 @@ export async function getCurrentTeacher(): Promise<Teacher | null> {
   return teacher ?? null;
 }
 
+export type Portal = "teacher" | "student" | "parent";
+
+/**
+ * Sends someone whose session no longer maps to a usable account through the
+ * sign-out route. Redirecting straight to the login page would loop, because
+ * the proxy bounces anyone holding a session cookie away from it.
+ */
+function endSession(portal: Portal, reason: "suspended" | "missing"): never {
+  redirect(`/auth/signout?portal=${portal}&reason=${reason}`);
+}
+
 export async function requireTeacher(options?: { allowPendingPassword?: boolean }) {
   const teacher = await getCurrentTeacher();
   if (!teacher) {
-    redirect("/login");
+    endSession("teacher", "missing");
+  }
+  if (teacher.status !== "active") {
+    endSession("teacher", "suspended");
   }
   if (teacher.mustChangePassword && !options?.allowPendingPassword) {
     redirect("/login/set-password");
   }
   return teacher;
+}
+
+/** For admin pages and server actions. Everyone else gets a plain 404. */
+export async function requireAdmin() {
+  const teacher = await requireTeacher();
+  if (!isAdmin(teacher)) {
+    notFound();
+  }
+  return teacher;
+}
+
+/** For API routes, which answer with JSON rather than redirecting. */
+export async function getAdminActor(): Promise<Teacher | null> {
+  const teacher = await getCurrentTeacher();
+  if (!teacher || teacher.status !== "active" || teacher.mustChangePassword) return null;
+  return isAdmin(teacher) ? teacher : null;
+}
+
+export async function isCurrentTeacherAdmin() {
+  const teacher = await getCurrentTeacher();
+  return Boolean(teacher && teacher.status === "active" && isAdmin(teacher));
 }
 
 export type SessionStudent = {
@@ -169,7 +205,10 @@ export async function getCurrentStudent(): Promise<Student | null> {
 export async function requireStudent(options?: { allowPendingPassword?: boolean }) {
   const student = await getCurrentStudent();
   if (!student) {
-    redirect("/student/login");
+    endSession("student", "missing");
+  }
+  if (student.status !== "active") {
+    endSession("student", "suspended");
   }
   if (student.mustChangePassword && !options?.allowPendingPassword) {
     redirect("/student/login/set-password");
@@ -248,7 +287,10 @@ export async function getCurrentParent(): Promise<Parent | null> {
 export async function requireParent(options?: { allowPendingPassword?: boolean }) {
   const parent = await getCurrentParent();
   if (!parent) {
-    redirect("/parent/login");
+    endSession("parent", "missing");
+  }
+  if (parent.status !== "active") {
+    endSession("parent", "suspended");
   }
   if (parent.mustChangePassword && !options?.allowPendingPassword) {
     redirect("/parent/login/set-password");

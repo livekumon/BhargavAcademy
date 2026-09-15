@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  ArrowLeftRight,
   KeyRound,
   LogOut,
   MoreHorizontal,
@@ -29,6 +30,8 @@ export const SIDEBAR_COOKIE = "ba_sidebar";
 
 type Badges = { leads: number };
 type User = { name: string; email: string };
+/** A second workspace this person can open, e.g. an admin's academy console. */
+type PortalSwitch = { href: string; label: string };
 
 function initials(name: string) {
   return name
@@ -71,11 +74,13 @@ function BadgeCount({ value, className }: { value: number; className?: string })
 function AccountMenu({
   user,
   signOut,
+  switchPortal,
   collapsed,
   side = "top",
 }: {
   user: User;
   signOut: () => Promise<void>;
+  switchPortal?: PortalSwitch;
   collapsed?: boolean;
   side?: "top" | "bottom";
 }) {
@@ -108,6 +113,14 @@ function AccountMenu({
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {switchPortal ? (
+          <DropdownMenuItem asChild className="gap-2 p-2">
+            <Link href={switchPortal.href}>
+              <ArrowLeftRight aria-hidden="true" />
+              {switchPortal.label}
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem asChild className="gap-2 p-2">
           <Link href="/dashboard/settings?section=account">
             <KeyRound aria-hidden="true" />
@@ -179,11 +192,13 @@ function NavLink({
 export function TeacherSidebar({
   user,
   signOut,
+  switchPortal,
   badges,
   defaultCollapsed,
 }: {
   user: User;
   signOut: () => Promise<void>;
+  switchPortal?: PortalSwitch;
   badges: Badges;
   defaultCollapsed: boolean;
 }) {
@@ -264,7 +279,7 @@ export function TeacherSidebar({
       </nav>
 
       <div className="mt-4 flex flex-col gap-1 border-t border-line pt-3">
-        <AccountMenu user={user} signOut={signOut} collapsed={collapsed} />
+        <AccountMenu user={user} signOut={signOut} switchPortal={switchPortal} collapsed={collapsed} />
         <button
           type="button"
           onClick={toggle}
@@ -294,10 +309,12 @@ const PRIMARY_MOBILE = ["/dashboard", "/dashboard/batches", "/dashboard/students
 export function TeacherMobileNav({
   user,
   signOut,
+  switchPortal,
   badges,
 }: {
   user: User;
   signOut: () => Promise<void>;
+  switchPortal?: PortalSwitch;
   badges: Badges;
 }) {
   const pathname = usePathname();
@@ -322,7 +339,7 @@ export function TeacherMobileNav({
           <span className="sr-only">Search</span>
         </button>
         <div className="w-10">
-          <AccountMenu user={user} signOut={signOut} collapsed side="bottom" />
+          <AccountMenu user={user} signOut={signOut} switchPortal={switchPortal} collapsed side="bottom" />
         </div>
       </header>
 

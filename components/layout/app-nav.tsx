@@ -3,9 +3,12 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
+  ArrowLeftRight,
   BookMarked,
+  Gauge,
   GraduationCap,
   HeartHandshake,
+  History,
   Inbox,
   LayoutGrid,
   LogOut,
@@ -29,7 +32,10 @@ import {
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Container } from "./container"
 
-export type AppRole = "teacher" | "student" | "parent"
+export type AppRole = "teacher" | "student" | "parent" | "admin"
+
+/** A second workspace the signed-in person can open, e.g. an admin's own teaching. */
+export type PortalSwitch = { href: string; label: string }
 
 type NavItem = {
   href: string
@@ -103,6 +109,52 @@ const navByRole: Record<AppRole, { home: string; label: string; items: NavItem[]
       },
     ],
   },
+  admin: {
+    home: "/admin",
+    label: "Admin",
+    items: [
+      {
+        href: "/admin",
+        label: "Overview",
+        icon: Gauge,
+        isActive: (p) => p === "/admin",
+      },
+      {
+        href: "/admin/people",
+        label: "People",
+        icon: Users,
+        isActive: (p) =>
+          p.startsWith("/admin/people") ||
+          p.startsWith("/admin/teachers") ||
+          p.startsWith("/admin/students") ||
+          p.startsWith("/admin/parents"),
+      },
+      {
+        href: "/admin/batches",
+        label: "Batches",
+        icon: LayoutGrid,
+        isActive: (p) => p.startsWith("/admin/batches"),
+      },
+      {
+        href: "/admin/leads",
+        label: "Leads",
+        icon: Inbox,
+        isActive: (p) => p.startsWith("/admin/leads"),
+      },
+      {
+        href: "/admin/activity",
+        label: "Activity",
+        icon: History,
+        isActive: (p) => p.startsWith("/admin/activity"),
+      },
+      {
+        href: "/admin/settings",
+        label: "Settings",
+        icon: Settings,
+        isActive: (p) => p.startsWith("/admin/settings"),
+      },
+    ],
+  },
   parent: {
     home: "/parent",
     label: "Parent",
@@ -144,10 +196,12 @@ export function AppNav({
   role,
   user,
   signOut,
+  switchPortal,
 }: {
   role: AppRole
   user: { name: string; email: string }
   signOut: () => Promise<void>
+  switchPortal?: PortalSwitch
 }) {
   const pathname = usePathname()
   const config = navByRole[role]
@@ -214,6 +268,14 @@ export function AppNav({
                 </span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+              {switchPortal ? (
+                <DropdownMenuItem asChild className="gap-2 p-2">
+                  <Link href={switchPortal.href}>
+                    <ArrowLeftRight aria-hidden="true" />
+                    {switchPortal.label}
+                  </Link>
+                </DropdownMenuItem>
+              ) : null}
               <form action={signOut}>
                 <DropdownMenuItem
                   asChild
@@ -277,6 +339,16 @@ export function AppNav({
                       </span>
                     </span>
                   </div>
+                  {switchPortal ? (
+                    <SheetClose asChild>
+                      <Button asChild variant="secondary" size="lg" className="w-full">
+                        <Link href={switchPortal.href}>
+                          <ArrowLeftRight data-icon="inline-start" />
+                          {switchPortal.label}
+                        </Link>
+                      </Button>
+                    </SheetClose>
+                  ) : null}
                   <form action={signOut}>
                     <Button type="submit" variant="outline" size="lg" className="w-full">
                       <LogOut data-icon="inline-start" />

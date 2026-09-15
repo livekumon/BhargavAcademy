@@ -3,6 +3,8 @@
 import { compare, hash } from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { isAdmin } from "@/lib/admin/policy";
+import { audit } from "@/lib/audit";
 import {
   clearParentSession,
   clearSession,
@@ -17,58 +19,17 @@ import {
 import { db, ensureDatabase } from "@/lib/db";
 import { flash } from "@/lib/flash";
 import { validateChangedPassword } from "@/lib/identity";
-import { parents, students, teachers } from "@/lib/schema";
+import { parents, students, teachers, type Teacher } from "@/lib/schema";
 
 export type AuthState = {
   error?: string;
 };
 
-function isValidEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
+const SUSPENDED_MESSAGE =
+  "This account is suspended. Contact the academy admin to restore access.";
 
-export async function registerTeacher(
-  _prev: AuthState,
-  formData: FormData,
-): Promise<AuthState> {
-  await ensureDatabase();
-
-  const name = String(formData.get("name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const password = String(formData.get("password") ?? "");
-
-  if (name.length < 2) {
-    return { error: "Please enter your full name." };
-  }
-  if (!isValidEmail(email)) {
-    return { error: "Please enter a valid email address." };
-  }
-  if (password.length < 8) {
-    return { error: "Password must be at least 8 characters." };
-  }
-
-  const [existing] = await db
-    .select({ id: teachers.id })
-    .from(teachers)
-    .where(eq(teachers.email, email))
-    .limit(1);
-
-  if (existing) {
-    return { error: "An account with this email already exists." };
-  }
-
-  const teacher = {
-    id: crypto.randomUUID(),
-    name,
-    email,
-    passwordHash: await hash(password, 10),
-    mustChangePassword: false,
-    createdAt: new Date(),
-  };
-
-  await db.insert(teachers).values(teacher);
-  await createSession({ id: teacher.id, name: teacher.name, email: teacher.email });
-  redirect("/dashboard");
+function teacherHome(teacher: Teacher) {
+  return isAdmin(teacher) ? "/admin" : "/dashboard";
 }
 
 export async function loginTeacher(
@@ -89,13 +50,29 @@ export async function loginTeacher(
   if (!teacher || !(await compare(password, teacher.passwordHash))) {
     return { error: "Incorrect email or password." };
   }
+  if (teacher.status !== "active") {
+    return { error: SUSPENDED_MESSAGE };
+  }
+
+  const admin = isAdmin(teacher);
+  await db
+    .update(teachers)
+    .set({ lastLoginAt: new Date() })
+    .where(eq(teachers.id, teacher.id));
+  await audit({
+    actor: { id: teacher.id, role: admin ? "admin" : "teacher", name: teacher.name },
+    action: "auth.login",
+    entityType: "teacher",
+    entityId: teacher.id,
+    summary: `${teacher.name} signed in`,
+  });
 
   await createSession({
     id: teacher.id,
     name: teacher.name,
     email: teacher.email,
   });
-  redirect(teacher.mustChangePassword ? "/login/set-password" : "/dashboard");
+  redirect(teacher.mustChangePassword ? "/login/set-password" : teacherHome(teacher));
 }
 
 export async function logoutTeacher() {
@@ -121,6 +98,21 @@ export async function loginStudent(
   if (!student?.passwordHash || !(await compare(password, student.passwordHash))) {
     return { error: "Incorrect email or password." };
   }
+  if (student.status !== "active") {
+    return { error: SUSPENDED_MESSAGE };
+  }
+
+  await db
+    .update(students)
+    .set({ lastLoginAt: new Date() })
+    .where(eq(students.id, student.id));
+  await audit({
+    actor: { id: student.id, role: "student", name: student.name },
+    action: "auth.login",
+    entityType: "student",
+    entityId: student.id,
+    summary: `${student.name} signed in`,
+  });
 
   await createStudentSession({
     id: student.id,
@@ -153,6 +145,21 @@ export async function loginParent(
   if (!parent || !(await compare(password, parent.passwordHash))) {
     return { error: "Incorrect email or password." };
   }
+  if (parent.status !== "active") {
+    return { error: SUSPENDED_MESSAGE };
+  }
+
+  await db
+    .update(parents)
+    .set({ lastLoginAt: new Date() })
+    .where(eq(parents.id, parent.id));
+  await audit({
+    actor: { id: parent.id, role: "parent", name: parent.name },
+    action: "auth.login",
+    entityType: "parent",
+    entityId: parent.id,
+    summary: `${parent.name} signed in`,
+  });
 
   await createParentSession({
     id: parent.id,
@@ -201,7 +208,7 @@ export async function setTeacherPassword(
     })
     .where(eq(teachers.id, teacher.id));
 
-  redirect("/dashboard");
+  redirect(teacherHome(teacher));
 }
 
 export async function setStudentPassword(

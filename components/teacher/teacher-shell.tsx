@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { Container } from "@/components/layout/container";
 import { Toaster } from "@/components/ui/sonner";
 import { readFlash } from "@/lib/flash";
-import { listLeads } from "@/lib/leads";
+import { listLeadsForTeacher } from "@/lib/leads";
 import { getTeacherBatches, getTeacherCourses, getTeacherParents, getTeacherStudents } from "@/lib/queries";
 import { CommandPalette } from "./command-palette";
 import { FlashToaster } from "./flash-toaster";
@@ -17,10 +17,13 @@ import { SIDEBAR_COOKIE, TeacherMobileNav, TeacherSidebar } from "./teacher-navi
 export async function TeacherShell({
   teacher,
   signOut,
+  switchPortal,
   children,
 }: {
   teacher: { id: string; name: string; email: string };
   signOut: () => Promise<void>;
+  /** Shown in the account menu, e.g. an admin moving to the academy console. */
+  switchPortal?: { href: string; label: string };
   children: ReactNode;
 }) {
   const [batches, students, courses, parents, leads, flash, cookieStore] = await Promise.all([
@@ -28,7 +31,7 @@ export async function TeacherShell({
     getTeacherStudents(teacher.id),
     getTeacherCourses(teacher.id),
     getTeacherParents(teacher.id),
-    listLeads().catch(() => []),
+    listLeadsForTeacher(teacher.id).catch(() => []),
     readFlash(),
     cookies(),
   ]);
@@ -40,11 +43,12 @@ export async function TeacherShell({
       <TeacherSidebar
         user={user}
         signOut={signOut}
+        switchPortal={switchPortal}
         badges={badges}
         defaultCollapsed={cookieStore.get(SIDEBAR_COOKIE)?.value === "collapsed"}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <TeacherMobileNav user={user} signOut={signOut} badges={badges} />
+        <TeacherMobileNav user={user} signOut={signOut} switchPortal={switchPortal} badges={badges} />
         <main id="main" className="flex-1 pt-6 pb-28 sm:pt-8 lg:pt-10 lg:pb-12">
           <Container width="xl">{children}</Container>
         </main>

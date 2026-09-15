@@ -118,6 +118,18 @@
   --plum-700: oklch(0.44 0.115 335);
   --plum-800: oklch(0.36 0.095 335);
   --plum-900: oklch(0.29 0.075 335);
+
+  /* Graphite — admin role tint. Low chroma on purpose: authority, not a fourth colour. */
+  --graphite-50: oklch(0.965 0.006 250);
+  --graphite-100: oklch(0.925 0.012 250);
+  --graphite-200: oklch(0.86 0.018 250);
+  --graphite-300: oklch(0.76 0.024 250);
+  --graphite-400: oklch(0.64 0.03 250);
+  --graphite-500: oklch(0.54 0.035 250);
+  --graphite-600: oklch(0.45 0.038 250);
+  --graphite-700: oklch(0.37 0.04 250);
+  --graphite-800: oklch(0.3 0.038 250);
+  --graphite-900: oklch(0.24 0.032 250);
 }
 
 /* =========================================================================
@@ -304,6 +316,18 @@
   --brand-line: var(--plum-200);
   --brand-ring: var(--plum-500);
   --elevation-brand: 0 10px 32px oklch(0.44 0.115 335 / 0.22);
+}
+
+[data-role="admin"] {
+  --brand: var(--graphite-800);
+  --brand-hover: var(--graphite-700);
+  --brand-active: var(--graphite-900);
+  --brand-subtle: var(--graphite-50);
+  --brand-subtle-fg: var(--graphite-800);
+  --brand-muted: var(--graphite-100);
+  --brand-line: var(--graphite-200);
+  --brand-ring: var(--graphite-500);
+  --elevation-brand: 0 10px 32px oklch(0.3 0.038 250 / 0.22);
 }
 
 /* =========================================================================

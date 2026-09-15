@@ -22,7 +22,7 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { Surface } from "@/components/ui/surface";
 import { requireTeacher } from "@/lib/auth";
 import { getBatchOverviews, type BatchOverview } from "@/lib/batch-overview";
-import { listLeads } from "@/lib/leads";
+import { listLeadsForTeacher } from "@/lib/leads";
 import { batchPath, chapterPath, submissionPath } from "@/lib/paths";
 import { getTeacherCourses, getTeacherParents, getTeacherStudents } from "@/lib/queries";
 import {
@@ -55,7 +55,7 @@ export default async function TodayPage() {
     getBatchOverviews(teacher.id),
     getTeacherRecentWork(teacher.id, 40),
     getTeacherRecentMarks(teacher.id, since),
-    listLeads().catch(() => []),
+    listLeadsForTeacher(teacher.id).catch(() => []),
     getTeacherParents(teacher.id),
     getTeacherCourses(teacher.id),
     getTeacherStudents(teacher.id),

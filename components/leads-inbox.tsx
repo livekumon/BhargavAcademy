@@ -9,10 +9,12 @@ import { saveLeadNotes, setLeadStatus } from "@/lib/actions/leads";
 import { LEAD_STATUS_LABEL, type LeadRecord, type LeadStatus } from "@/lib/leads";
 import { relativeDay, whatsappNumber } from "@/lib/teacher-format";
 
-const tones: Record<LeadStatus, "highlight" | "info" | "success"> = {
+const tones: Record<LeadStatus, "highlight" | "info" | "success" | "brand" | "neutral"> = {
   new: "highlight",
   contacted: "info",
+  demo: "brand",
   enrolled: "success",
+  closed: "neutral",
 };
 
 function StatusButton({ lead, to, label, icon: Icon, primary = false }: {
@@ -45,7 +47,7 @@ export function LeadsInbox({ leads, status }: { leads: LeadRecord[]; status: Lea
       <EmptyState
         icon={<Inbox />}
         title="No enquiries yet"
-        description="When a parent submits the enroll form on bhargavacademy.com, it lands here so you can call them back."
+        description="When the academy admin assigns you a website enquiry, it lands here so you can call the family back."
       />
     );
   }
