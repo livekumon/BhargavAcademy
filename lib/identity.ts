@@ -64,15 +64,44 @@ export function resolveAccountPassword(password: string) {
   return { password: value };
 }
 
+export type PasswordCheck = { label: string; met: boolean };
+
+/** Same rules the set-password form shows. Keep UI and server in lockstep. */
+export function changedPasswordChecks(
+  password: string,
+  confirm: string,
+): PasswordCheck[] {
+  return [
+    {
+      label: "At least 8 characters",
+      met: password.length >= MIN_CHANGED_PASSWORD_LENGTH,
+    },
+    {
+      label: "Letters and numbers",
+      met: /[a-z]/i.test(password) && /\d/.test(password),
+    },
+    {
+      label: "Not the default password",
+      met: password.length > 0 && password !== DEFAULT_PASSWORD,
+    },
+    {
+      label: "Both passwords match",
+      met: password.length > 0 && password === confirm,
+    },
+  ];
+}
+
 export function validateChangedPassword(password: string, confirm: string) {
-  if (password.length < MIN_CHANGED_PASSWORD_LENGTH) {
+  const failed = changedPasswordChecks(password, confirm).find((check) => !check.met);
+  if (!failed) return null;
+  if (failed.label === "At least 8 characters") {
     return "Password must be at least 8 characters.";
   }
-  if (password === DEFAULT_PASSWORD) {
+  if (failed.label === "Letters and numbers") {
+    return "Password must include both letters and numbers.";
+  }
+  if (failed.label === "Not the default password") {
     return "Choose a new password. You cannot keep the default password.";
   }
-  if (password !== confirm) {
-    return "Passwords do not match.";
-  }
-  return null;
+  return "Passwords do not match.";
 }
