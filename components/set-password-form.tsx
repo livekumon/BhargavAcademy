@@ -15,21 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { type AuthState } from "@/lib/actions/auth";
+import { changedPasswordChecks } from "@/lib/identity";
 
 const inputClass =
   "h-11 rounded-lg bg-raised pl-10 placeholder:text-content-subtle text-[0.9375rem] shadow-elevation-xs transition-[border-color,box-shadow] duration-(--dur-fast) hover:border-content-subtle/60 md:text-[0.9375rem]";
-
-const DEFAULT_PASSWORD = "123456";
-
-/** Plain-language checks, in the order people fix them. */
-function passwordChecks(password: string, confirm: string) {
-  return [
-    { label: "At least 8 characters", met: password.length >= 8 },
-    { label: "Letters and numbers", met: /[a-z]/i.test(password) && /\d/.test(password) },
-    { label: "Not the default password", met: password.length > 0 && password !== DEFAULT_PASSWORD },
-    { label: "Both passwords match", met: password.length > 0 && password === confirm },
-  ];
-}
 
 function strength(password: string) {
   if (!password) return { score: 0, label: "" };
@@ -55,10 +44,12 @@ export function SetPasswordForm({
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const checks = passwordChecks(password, confirm);
+  const checks = changedPasswordChecks(password, confirm);
+  const ready = checks.every((check) => check.met);
   const meter = strength(password);
   const ids = useId();
   const errorId = `${ids}-error`;
+  const checksId = `${ids}-checks`;
   const error = pending ? undefined : state.error;
 
   return (
@@ -101,7 +92,7 @@ export function SetPasswordForm({
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             aria-invalid={error ? true : undefined}
-            aria-describedby={error ? errorId : undefined}
+            aria-describedby={`${checksId}${error ? ` ${errorId}` : ""}`}
             className={cn(inputClass, "pr-12")}
           />
           <button
@@ -142,7 +133,7 @@ export function SetPasswordForm({
         </div>
       </div>
 
-      <div className="space-y-3 rounded-lg bg-sunken/60 p-3">
+      <div id={checksId} className="space-y-3 rounded-lg bg-sunken/60 p-3">
         <div className="flex items-center gap-3">
           <div className="grid flex-1 grid-cols-4 gap-1" aria-hidden="true">
             {[1, 2, 3, 4].map((step) => (
@@ -170,7 +161,10 @@ export function SetPasswordForm({
           {checks.map((check) => (
             <li
               key={check.label}
-              className={cn("flex items-center gap-1.5", check.met ? "text-success-subtle-fg" : "text-content-subtle")}
+              className={cn(
+                "flex items-center gap-1.5",
+                check.met ? "text-success-subtle-fg" : "text-content-subtle",
+              )}
             >
               {check.met ? (
                 <Check aria-hidden="true" className="size-3.5" />
@@ -198,7 +192,7 @@ export function SetPasswordForm({
       <Button
         type="submit"
         size="lg"
-        disabled={pending}
+        disabled={pending || !ready}
         className="h-11 w-full text-[0.9375rem] shadow-elevation-brand hover:bg-brand-hover disabled:opacity-80"
       >
         {pending ? (
