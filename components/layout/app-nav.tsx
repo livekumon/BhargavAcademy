@@ -12,6 +12,7 @@ import {
   Menu,
   PenLine,
   Settings,
+  Sun,
   Users,
   type LucideIcon,
 } from "lucide-react"
@@ -42,7 +43,16 @@ type NavItem = {
  * Navigation lives here rather than in each layout so that active-state rules
  * are functions, which cannot be passed from a server layout.
  */
-const navByRole: Record<AppRole, { home: string; label: string; items: NavItem[] }> = {
+const navByRole: Record<
+  AppRole,
+  {
+    home: string
+    label: string
+    items: NavItem[]
+    /** On phones, show items as a bottom tab bar instead of the menu sheet. */
+    tabBar?: boolean
+  }
+> = {
   teacher: {
     home: "/dashboard",
     label: "Teacher",
@@ -88,12 +98,19 @@ const navByRole: Record<AppRole, { home: string; label: string; items: NavItem[]
   student: {
     home: "/student",
     label: "Student",
+    tabBar: true,
     items: [
       {
         href: "/student",
-        label: "My courses",
+        label: "Today",
+        icon: Sun,
+        isActive: (p) => p === "/student",
+      },
+      {
+        href: "/student/courses",
+        label: "Courses",
         icon: GraduationCap,
-        isActive: (p) => !p.startsWith("/student/marks"),
+        isActive: (p) => p.startsWith("/student/courses") || p.startsWith("/student/materials"),
       },
       {
         href: "/student/marks",
@@ -153,6 +170,7 @@ export function AppNav({
   const config = navByRole[role]
 
   return (
+    <>
     <header className="sticky top-0 z-40 border-b border-line bg-canvas/85 backdrop-blur-xl">
       <Container width="xl" className="flex h-16 items-center gap-6">
         <div className="flex items-center gap-3">
@@ -192,10 +210,13 @@ export function AppNav({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="hidden items-center gap-2.5 rounded-full py-1 pr-3 pl-1 text-left transition-colors duration-(--dur-fast) hover:bg-sunken focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none md:flex"
+                className={cn(
+                  "items-center gap-2.5 rounded-full py-1 pr-3 pl-1 text-left transition-colors duration-(--dur-fast) hover:bg-sunken focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none md:flex",
+                  config.tabBar ? "flex p-1.5 md:py-1 md:pr-3 md:pl-1" : "hidden"
+                )}
               >
                 <Avatar name={user.name} />
-                <span className="max-w-40 truncate text-sm font-medium">
+                <span className={cn("max-w-40 truncate text-sm font-medium", config.tabBar && "hidden md:inline")}>
                   {user.name}
                 </span>
                 <span className="sr-only">Open account menu</span>
@@ -229,6 +250,7 @@ export function AppNav({
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {config.tabBar ? null : (
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="outline" size="icon-lg" className="md:hidden">
@@ -287,8 +309,45 @@ export function AppNav({
               </div>
             </SheetContent>
           </Sheet>
+          )}
         </div>
       </Container>
     </header>
+
+    {config.tabBar ? (
+      <nav
+        aria-label="Primary"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-canvas/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
+      >
+        <ul className="mx-auto grid max-w-md" style={{ gridTemplateColumns: `repeat(${config.items.length}, minmax(0, 1fr))` }}>
+          {config.items.map((item) => {
+            const active = item.isActive(pathname)
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-medium transition-colors duration-(--dur-fast) focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none focus-visible:ring-inset",
+                    active ? "text-brand" : "text-content-muted hover:text-content"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex h-7 w-14 items-center justify-center rounded-full transition-colors duration-(--dur-base)",
+                      active && "bg-brand-subtle"
+                    )}
+                  >
+                    <item.icon aria-hidden="true" className="size-5" />
+                  </span>
+                  {item.label}
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
+      </nav>
+    ) : null}
+    </>
   )
 }
