@@ -1,5 +1,6 @@
 "use server";
 
+import { flash } from "@/lib/flash";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireTeacher } from "@/lib/auth";
@@ -72,6 +73,7 @@ async function addOption(formData: FormData): Promise<LookupState> {
   });
 
   revalidateLookupPaths();
+  await flash(`${label} added`);
   return {};
 }
 

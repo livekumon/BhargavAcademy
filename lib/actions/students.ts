@@ -1,11 +1,14 @@
 "use server";
 
+import { flash } from "@/lib/flash";
+import { updateLeadStatus } from "@/lib/leads";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireTeacher } from "@/lib/auth";
-import { db, ensureDatabase } from "@/lib/db";
+import { db, ensureDatabase, nextAcademyEmail } from "@/lib/db";
 import { deletePdf } from "@/lib/files";
+import { resolveAccountPassword } from "@/lib/identity";
 import { batchPath, parentChildPath, studentsPath, studentManagePath } from "@/lib/paths";
 import { parseOption } from "@/lib/academics";
 import { getLookupCatalog, lookupChoices } from "@/lib/lookups";
@@ -142,6 +145,18 @@ async function unenrollFromBatch(studentId: string, batchId: string) {
   }
 }
 
+/** A student created from a website enquiry closes that lead. */
+async function markLeadEnrolled(formData: FormData) {
+  const leadId = String(formData.get("leadId") ?? "").trim();
+  if (!leadId) return;
+  try {
+    await updateLeadStatus(leadId, "enrolled");
+    revalidatePath("/dashboard/leads");
+  } catch {
+    // The lead may have been removed; the student is created either way.
+  }
+}
+
 function safeNext(value: unknown) {
   const next = String(value ?? "").trim();
   return next.startsWith("/dashboard/") && !next.startsWith("//") ? next : "";
@@ -174,7 +189,7 @@ export async function createStudent(
   const contactNumber = normalizeContact(
     String(formData.get("contactNumber") ?? ""),
   );
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  let email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
 
   if (name.length < 2) {
@@ -183,8 +198,11 @@ export async function createStudent(
   if (!isValidContact(contactNumber)) {
     return { error: "Enter a valid contact number." };
   }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { error: "Enter a valid student email." };
+  }
+  if (!email) {
+    email = await nextAcademyEmail(name);
   }
 
   const academic = await readAcademicProfile(formData);
@@ -225,7 +243,8 @@ export async function createStudent(
       .where(eq(students.id, existing.id));
 
     const parentEmail = String(formData.get("parentEmail") ?? "").trim();
-    if (parentEmail) {
+    const parentName = String(formData.get("parentName") ?? "").trim();
+    if (parentEmail || parentName) {
       const parentResult = await syncStudentParent(existing.id, formData);
       if (parentResult?.error) {
         return parentResult;
@@ -233,11 +252,14 @@ export async function createStudent(
     }
 
     revalidateStudentPaths(batch.id, existing.id);
+    await markLeadEnrolled(formData);
+    await flash(`${existing.name} added to ${batch.name}`);
     redirect(safeNext(formData.get("next")) || batchPath(batch.id));
   }
 
-  if (password.length < 8) {
-    return { error: "Password must be at least 8 characters for a new student." };
+  const resolvedPassword = resolveAccountPassword(password);
+  if ("error" in resolvedPassword) {
+    return resolvedPassword;
   }
 
   const studentId = crypto.randomUUID();
@@ -247,7 +269,8 @@ export async function createStudent(
     name,
     contactNumber,
     email,
-    passwordHash: await hash(password, 10),
+    passwordHash: await hash(resolvedPassword.password, 10),
+    mustChangePassword: true,
     syllabus: academic.syllabus,
     exam: academic.exam,
     createdAt: new Date(),
@@ -260,6 +283,8 @@ export async function createStudent(
   }
 
   revalidateStudentPaths(batch.id, studentId);
+  await markLeadEnrolled(formData);
+  await flash(`${name} added`, { description: `Enrolled in ${batch.name}. Their login is ${email}.` });
   redirect(safeNext(formData.get("next")) || batchPath(batch.id));
 }
 
@@ -315,6 +340,7 @@ export async function updateStudent(
     syllabus: string;
     exam: string;
     passwordHash?: string;
+    mustChangePassword?: boolean;
   } = {
     name,
     contactNumber,
@@ -324,10 +350,12 @@ export async function updateStudent(
   };
 
   if (password) {
-    if (password.length < 8) {
-      return { error: "Password must be at least 8 characters." };
+    const resolvedPassword = resolveAccountPassword(password);
+    if ("error" in resolvedPassword) {
+      return resolvedPassword;
     }
-    updates.passwordHash = await hash(password, 10);
+    updates.passwordHash = await hash(resolvedPassword.password, 10);
+    updates.mustChangePassword = true;
   }
 
   await db.update(students).set(updates).where(eq(students.id, studentId));
@@ -338,6 +366,7 @@ export async function updateStudent(
   }
 
   revalidateStudentPaths(batchId, studentId);
+  await flash(`${name} saved`);
   redirect(safeNext(formData.get("next")) || batchPath(batchId));
 }
 
@@ -382,6 +411,7 @@ export async function enrollStudent(
 
   await enrollInBatch(studentId, batch.id);
   revalidateStudentPaths(batch.id, studentId);
+  await flash(`Enrolled in ${batch.name}`);
   redirect(studentManagePath(studentId));
 }
 
@@ -390,10 +420,14 @@ async function syncStudentParent(
   formData: FormData,
 ): Promise<StudentState | void> {
   const parentName = String(formData.get("parentName") ?? "").trim();
-  const parentEmail = String(formData.get("parentEmail") ?? "")
+  let parentEmail = String(formData.get("parentEmail") ?? "")
     .trim()
     .toLowerCase();
   const parentPassword = String(formData.get("parentPassword") ?? "");
+
+  if (!parentEmail && parentName.length >= 2) {
+    parentEmail = await nextAcademyEmail(parentName);
+  }
 
   if (!parentEmail) {
     await db
@@ -418,8 +452,9 @@ async function syncStudentParent(
     if (parentName.length < 2) {
       return { error: "Parent name is required for a new parent login." };
     }
-    if (parentPassword.length < 8) {
-      return { error: "Parent password must be at least 8 characters." };
+    const resolvedPassword = resolveAccountPassword(parentPassword);
+    if ("error" in resolvedPassword) {
+      return resolvedPassword;
     }
 
     parentId = crypto.randomUUID();
@@ -427,18 +462,21 @@ async function syncStudentParent(
       id: parentId,
       name: parentName,
       email: parentEmail,
-      passwordHash: await hash(parentPassword, 10),
+      passwordHash: await hash(resolvedPassword.password, 10),
+      mustChangePassword: true,
       createdAt: new Date(),
     });
   } else if (parentPassword) {
-    if (parentPassword.length < 8) {
-      return { error: "Parent password must be at least 8 characters." };
+    const resolvedPassword = resolveAccountPassword(parentPassword);
+    if ("error" in resolvedPassword) {
+      return resolvedPassword;
     }
     await db
       .update(parents)
       .set({
         name: parentName || existing.name,
-        passwordHash: await hash(parentPassword, 10),
+        passwordHash: await hash(resolvedPassword.password, 10),
+        mustChangePassword: true,
       })
       .where(eq(parents.id, existing.id));
   } else if (parentName && parentName !== existing.name) {
@@ -482,6 +520,7 @@ export async function enrollDirectoryStudents(formData: FormData) {
     revalidateStudentPaths(batch.id, studentId);
   }
 
+  await flash(`Enrolled in ${batch.name}`);
   redirect(safeNext(formData.get("next")) || studentsPath());
 }
 
@@ -503,6 +542,7 @@ export async function deleteDirectoryStudents(formData: FormData) {
   }
 
   revalidatePath(studentsPath());
+  await flash(`${studentIds.length === 1 ? "1 student" : `${studentIds.length} students`} removed`);
   redirect(safeNext(formData.get("next")) || studentsPath());
 }
 
@@ -524,6 +564,7 @@ export async function deleteDirectoryStudent(
   }
 
   revalidatePath(studentsPath());
+  await flash(`${owned.student.name} removed`);
   redirect(safeNext(formData?.get("next")) || studentsPath());
 }
 
@@ -541,7 +582,7 @@ export async function deleteStudent(
   }
 
   await unenrollFromBatch(studentId, batchId);
-
   revalidateStudentPaths(batchId, studentId);
+  await flash(`${owned.student.name} removed from ${owned.batch.name}`);
   redirect(safeNext(formData?.get("next")) || batchPath(batchId));
 }

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BookOpen, ClipboardList, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireParent } from "@/lib/auth";
 import { parentChildPath } from "@/lib/paths";
@@ -37,8 +36,8 @@ export default async function ParentHomePage() {
             </div>
             <CardTitle className="font-heading text-2xl">No children linked yet</CardTitle>
             <CardDescription className="max-w-md">
-              Ask the teacher to add your email on your child&apos;s student
-              profile.
+              When a teacher links students to this login, they will appear here.
+              Open a child to see their dashboard.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -105,9 +104,9 @@ export default async function ParentHomePage() {
                       </div>
                     ))
                   )}
-                  <Button variant="outline" size="sm">
+                  <span className="inline-flex h-8 items-center rounded-lg border border-line px-2.5 text-sm font-medium">
                     View details
-                  </Button>
+                  </span>
                 </CardContent>
               </Card>
             </Link>

@@ -1,6 +1,7 @@
 "use server";
 
-import { and, eq, max } from "drizzle-orm";
+import { flash } from "@/lib/flash";
+import { and, asc, eq, max } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { requireTeacher } from "@/lib/auth";
@@ -13,6 +14,7 @@ import {
   libraryChapterPath,
   libraryCoursePath,
 } from "@/lib/paths";
+import { parseDateInput } from "@/lib/dates";
 import { parseMaterialKind, type MaterialKind } from "@/lib/materials";
 import {
   getBatchCourse,
@@ -47,11 +49,12 @@ function getSelectedStudentIds(formData: FormData) {
     .filter(Boolean);
 }
 
-function readMaterialKind(formData: FormData):
-  | { kind: MaterialKind; instructions: string }
-  | { error: string } {
+type MaterialFields = { kind: MaterialKind; instructions: string; dueAt: Date | null };
+
+function readMaterialKind(formData: FormData): MaterialFields | { error: string } {
   const kind = parseMaterialKind(formData.get("kind"));
   const instructions = String(formData.get("instructions") ?? "").trim();
+  const dueDate = parseDateInput(String(formData.get("dueAt") ?? "").trim());
 
   if (kind === "assignment" && instructions.length < 2) {
     return {
@@ -62,6 +65,8 @@ function readMaterialKind(formData: FormData):
   return {
     kind,
     instructions: kind === "assignment" ? instructions : "",
+    // Due at the end of that day in India, wherever the server runs.
+    dueAt: kind === "assignment" && dueDate ? new Date(`${dueDate}T23:59:59+05:30`) : null,
   };
 }
 
@@ -69,8 +74,7 @@ async function addBatchPdf(
   batchId: string,
   chapterId: string,
   file: File,
-  kind: MaterialKind,
-  instructions: string,
+  { kind, instructions, dueAt }: MaterialFields,
 ) {
   const nextFileName = await savePdf(file);
   const [next] = await db
@@ -92,6 +96,7 @@ async function addBatchPdf(
     pdfOriginalName: file.name,
     kind,
     instructions,
+    dueAt,
     position: (next?.value ?? 0) + 1,
     updatedAt: new Date(),
   });
@@ -145,8 +150,7 @@ async function saveNewPdfAndAssignments(
   chapterId: string,
   pdf: File | null,
   studentIds: string[],
-  kind: MaterialKind,
-  instructions: string,
+  fields: MaterialFields,
 ) {
   if (!pdf) {
     if (studentIds.length > 0) {
@@ -155,13 +159,7 @@ async function saveNewPdfAndAssignments(
     return;
   }
 
-  const materialId = await addBatchPdf(
-    batchId,
-    chapterId,
-    pdf,
-    kind,
-    instructions,
-  );
+  const materialId = await addBatchPdf(batchId, chapterId, pdf, fields);
   await replaceMaterialAssignments(materialId, batchId, studentIds);
 }
 
@@ -216,12 +214,12 @@ export async function createChapter(
       id,
       pdf,
       studentIds,
-      kindFields?.kind ?? "class_material",
-      kindFields?.instructions ?? "",
+      kindFields ?? { kind: "class_material", instructions: "", dueAt: null },
     );
 
     revalidatePath(libraryCoursePath(courseId));
     revalidatePath(coursePath(batchId, courseId));
+    await flash(`${title} added`);
     redirect(chapterPath(batchId, courseId, id));
   } catch (error) {
     unstable_rethrow(error);
@@ -276,6 +274,7 @@ export async function updateChapter(
     revalidatePath(libraryCoursePath(courseId));
     revalidatePath(coursePath(batchId, courseId));
     revalidatePath(chapterPath(batchId, courseId, chapterId));
+    await flash("Chapter saved");
     redirect(chapterPath(batchId, courseId, chapterId));
   } catch (error) {
     unstable_rethrow(error);
@@ -335,13 +334,13 @@ export async function uploadBatchMaterial(
       chapterId,
       pdf,
       enrolled.map((student) => student.id),
-      kindFields.kind,
-      kindFields.instructions,
+      kindFields,
     );
     revalidatePath("/dashboard");
     revalidatePath(batchPath(batchId));
     revalidatePath(coursePath(batchId, course.id));
     revalidatePath(chapterPath(batchId, course.id, chapterId));
+    await flash(`${pdf.name} uploaded`, { description: `${kindFields.kind === "assignment" ? "Assignment" : "Class material"} for ${enrolled.length} ${enrolled.length === 1 ? "student" : "students"}.` });
     return { ok: true, at: Date.now(), chapterId };
   } catch (error) {
     unstable_rethrow(error);
@@ -382,11 +381,11 @@ export async function addChapterPdf(
       chapterId,
       pdf,
       getSelectedStudentIds(formData),
-      kindFields.kind,
-      kindFields.instructions,
+      kindFields,
     );
     revalidatePath(coursePath(batchId, courseId));
     revalidatePath(chapterPath(batchId, courseId, chapterId));
+    await flash(`${pdf.name} uploaded`);
     redirect(chapterPath(batchId, courseId, chapterId));
   } catch (error) {
     unstable_rethrow(error);
@@ -438,6 +437,7 @@ export async function updateChapterPdfAssignments(
     .set({
       kind: kindFields.kind,
       instructions: kindFields.instructions,
+      dueAt: kindFields.dueAt,
       updatedAt: new Date(),
     })
     .where(eq(chapterMaterials.id, material.id));
@@ -449,7 +449,8 @@ export async function updateChapterPdfAssignments(
   );
   revalidatePath(coursePath(batchId, courseId));
   revalidatePath(chapterPath(batchId, courseId, chapterId));
-  redirect(chapterPath(batchId, courseId, chapterId));
+  await flash("Material saved");
+  redirect(`${chapterPath(batchId, courseId, chapterId)}?material=${material.id}`);
 }
 
 export async function removeChapterPdf(
@@ -481,6 +482,7 @@ export async function removeChapterPdf(
   await deleteSubmissionsForMaterials([material.id]);
   await deletePdf(material.pdfFileName);
   await db.delete(chapterMaterials).where(eq(chapterMaterials.id, material.id));
+  await flash(`${material.pdfOriginalName ?? "PDF"} removed`);
 
   revalidatePath(coursePath(batchId, courseId));
   revalidatePath(chapterPath(batchId, courseId, chapterId));
@@ -513,7 +515,8 @@ export async function deleteChapter(
 
   await deleteSharedChapter(courseId, chapterId);
   revalidatePath(coursePath(batchId, courseId));
-  redirect(coursePath(batchId, courseId));
+  await flash("Chapter deleted");
+  redirect(`${batchPath(batchId)}?tab=chapters`);
 }
 
 export async function createLibraryChapter(
@@ -555,6 +558,7 @@ export async function createLibraryChapter(
   });
 
   revalidatePath(libraryCoursePath(courseId));
+  await flash(`${title} added`);
   redirect(libraryChapterPath(courseId, id));
 }
 
@@ -590,6 +594,7 @@ export async function updateLibraryChapter(
 
   revalidatePath(libraryCoursePath(courseId));
   revalidatePath(libraryChapterPath(courseId, chapterId));
+  await flash("Chapter saved");
   redirect(libraryChapterPath(courseId, chapterId));
 }
 
@@ -603,5 +608,35 @@ export async function deleteLibraryChapter(courseId: string, chapterId: string) 
   }
 
   await deleteSharedChapter(courseId, chapterId);
+  await flash("Chapter deleted");
   redirect(libraryCoursePath(courseId));
+}
+
+/** Swap a chapter with its neighbour. Order is shared by every batch using the course. */
+export async function moveLibraryChapter(courseId: string, chapterId: string, direction: "up" | "down") {
+  const teacher = await requireTeacher();
+  await ensureDatabase();
+
+  const course = await getOwnedCourseForTeacher(teacher.id, courseId);
+  if (!course) return;
+
+  const ordered = await db
+    .select({ id: chapters.id, position: chapters.position })
+    .from(chapters)
+    .where(eq(chapters.courseId, courseId))
+    .orderBy(asc(chapters.position), asc(chapters.createdAt));
+
+  const index = ordered.findIndex((chapter) => chapter.id === chapterId);
+  const swapWith = direction === "up" ? index - 1 : index + 1;
+  if (index < 0 || swapWith < 0 || swapWith >= ordered.length) return;
+
+  // Rewrite positions densely so legacy duplicates can't block a swap.
+  const next = [...ordered];
+  [next[index], next[swapWith]] = [next[swapWith], next[index]];
+  for (const [position, chapter] of next.entries()) {
+    await db.update(chapters).set({ position: position + 1 }).where(eq(chapters.id, chapter.id));
+  }
+
+  revalidatePath(libraryCoursePath(courseId));
+  revalidatePath("/dashboard", "layout");
 }

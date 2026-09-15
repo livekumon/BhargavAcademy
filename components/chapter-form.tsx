@@ -2,8 +2,8 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
-import { FileText } from "lucide-react";
 import { MaterialKindFields } from "@/components/material-kind-fields";
+import { PdfDropField } from "@/components/teacher/pdf-drop-field";
 import {
   StudentAssignmentFields,
   type StudentOption,
@@ -30,7 +30,6 @@ export function ChapterForm({
   students?: StudentOption[];
 }) {
   const [state, formAction, pending] = useActionState(action, {});
-  const [fileName, setFileName] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>(
     students.map((student) => student.id),
   );
@@ -62,29 +61,11 @@ export function ChapterForm({
       {showPdf ? (
         <>
           <div className="space-y-2">
-            <Label htmlFor="pdf">First PDF (optional)</Label>
-            <div className="rounded-xl border border-dashed border-border bg-muted/40 p-4">
-              <Input
-                id="pdf"
-                name="pdf"
-                type="file"
-                accept="application/pdf,.pdf"
-                className="cursor-pointer"
-                onChange={(event) => {
-                  setFileName(event.target.files?.[0]?.name ?? null);
-                }}
-              />
-              <p className="mt-2 text-xs text-muted-foreground">
-                You can add more PDFs to this chapter after it is created. PDF
-                only, up to 20 MB.
-              </p>
-              {fileName ? (
-                <p className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium">
-                  <FileText className="size-4" />
-                  {fileName}
-                </p>
-              ) : null}
-            </div>
+            <p className="text-sm font-medium">First PDF (optional)</p>
+            <PdfDropField
+              required={false}
+              hint="PDF only, up to 20 MB. You can add more after the chapter is created."
+            />
           </div>
 
           <MaterialKindFields />
@@ -98,16 +79,16 @@ export function ChapterForm({
       ) : null}
 
       {state.error ? (
-        <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <p role="alert" className="rounded-lg bg-danger-subtle px-3 py-2 text-sm text-danger-subtle-fg">
           {state.error}
         </p>
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" disabled={pending}>
-          {pending ? "Saving..." : submitLabel}
+        <Button type="submit" size="lg" disabled={pending}>
+          {pending ? "Saving…" : submitLabel}
         </Button>
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" size="lg">
           <Link href={cancelHref}>Cancel</Link>
         </Button>
       </div>

@@ -19,12 +19,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StatusPill } from "@/components/ui/status-pill";
-import { SELECT_CLASS_NAME, optionLabel, type LookupChoice } from "@/lib/academics";
+import { optionLabel, type LookupChoice } from "@/lib/academics";
 import {
   deleteDirectoryStudents,
   enrollDirectoryStudents,
 } from "@/lib/actions/students";
-import { newStudentPath, studentsPath } from "@/lib/paths";
+import { newStudentPath, studentManagePath, studentsPath } from "@/lib/paths";
 import { cn } from "@/lib/utils";
 
 export type DirectoryStudent = {
@@ -40,7 +40,10 @@ export type DirectoryStudent = {
 export type DirectoryView = "cards" | "list" | "table";
 
 const CHECK_CLASS =
-  "size-4 shrink-0 rounded border-input accent-primary focus-visible:ring-3 focus-visible:ring-ring/50";
+  "size-4 shrink-0 rounded border-input accent-(--brand) focus-visible:ring-3 focus-visible:ring-ring/50";
+
+const FILTER_SELECT =
+  "h-10 min-w-0 rounded-lg border border-input bg-raised px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 lg:w-40";
 
 export function parseDirectoryView(value: string | string[] | undefined): DirectoryView {
   const view = Array.isArray(value) ? value[0] : value;
@@ -162,78 +165,64 @@ export function StudentDirectory({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid gap-3 rounded-xl bg-surface p-4 ring-1 ring-line sm:p-5">
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-content-subtle" />
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+        <div className="relative min-w-0 flex-1 lg:min-w-64">
+          <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-content-subtle" />
           <Input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search name, email, or phone"
+            placeholder="Search name, email or phone"
             aria-label="Search students"
-            className="pl-8"
+            className="h-10 bg-raised pl-9"
           />
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="filter-syllabus">Syllabus</Label>
-            <select
-              id="filter-syllabus"
-              className={SELECT_CLASS_NAME}
-              value={syllabus}
-              onChange={(event) => setSyllabus(event.target.value)}
-            >
-              <option value="">All syllabuses</option>
-              {syllabuses.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="filter-exam">Exam</Label>
-            <select
-              id="filter-exam"
-              className={SELECT_CLASS_NAME}
-              value={exam}
-              onChange={(event) => setExam(event.target.value)}
-            >
-              <option value="">All exams</option>
-              {exams.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="filter-batch">Batch</Label>
-            <select
-              id="filter-batch"
-              className={SELECT_CLASS_NAME}
-              value={batchId}
-              onChange={(event) => setBatchId(event.target.value)}
-            >
-              <option value="">All batches</option>
-              {batches.map((batch) => (
-                <option key={batch.id} value={batch.id}>
-                  {batch.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-end">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={!filtering}
-              onClick={clearFilters}
-            >
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex">
+          <select
+            aria-label="Filter by batch"
+            className={FILTER_SELECT}
+            value={batchId}
+            onChange={(event) => setBatchId(event.target.value)}
+          >
+            <option value="">All batches</option>
+            {batches.map((batch) => (
+              <option key={batch.id} value={batch.id}>
+                {batch.name}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Filter by syllabus"
+            className={FILTER_SELECT}
+            value={syllabus}
+            onChange={(event) => setSyllabus(event.target.value)}
+          >
+            <option value="">All syllabuses</option>
+            {syllabuses.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Filter by exam"
+            className={FILTER_SELECT}
+            value={exam}
+            onChange={(event) => setExam(event.target.value)}
+          >
+            <option value="">All exams</option>
+            {exams.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+          {filtering ? (
+            <Button type="button" variant="ghost" size="lg" onClick={clearFilters} className="h-10">
               <X data-icon="inline-start" />
-              Clear filters
+              Clear
             </Button>
-          </div>
+          ) : null}
         </div>
       </div>
 
@@ -291,7 +280,10 @@ export function StudentDirectory({
       </div>
 
       {selectedVisible.length > 0 ? (
-        <div className="flex flex-wrap items-end gap-3 rounded-xl bg-brand-subtle px-4 py-3 ring-1 ring-brand-line">
+        <div role="region" aria-label="Bulk actions" className="sticky bottom-20 z-30 flex flex-wrap items-end gap-3 rounded-xl bg-raised px-4 py-3 shadow-elevation-lg ring-1 ring-brand-line lg:bottom-4">
+          <p className="tabular w-full text-sm font-medium sm:w-auto sm:self-center">
+            {selectedVisible.length} selected
+          </p>
           <form
             action={enrollDirectoryStudents}
             className="flex flex-wrap items-end gap-2"
@@ -305,12 +297,12 @@ export function StudentDirectory({
               value={`${studentsPath()}?view=${view}`}
             />
             <div className="min-w-48 space-y-1.5">
-              <Label htmlFor="bulk-batch">Enroll selected</Label>
+              <Label htmlFor="bulk-batch">Enroll in</Label>
               <select
                 id="bulk-batch"
                 name="batchId"
                 required
-                className={SELECT_CLASS_NAME}
+                className={FILTER_SELECT}
                 defaultValue=""
               >
                 <option value="" disabled>
@@ -323,7 +315,7 @@ export function StudentDirectory({
                 ))}
               </select>
             </div>
-            <Button type="submit" variant="outline">
+            <Button type="submit" size="lg">
               Enroll
             </Button>
           </form>
@@ -337,14 +329,18 @@ export function StudentDirectory({
               value={`${studentsPath()}?view=${view}`}
             />
             <ConfirmSubmitButton
-              message={`Remove ${selectedVisible.length} selected student${selectedVisible.length === 1 ? "" : "s"} from every batch?`}
+              title={`Delete ${selectedVisible.length} student${selectedVisible.length === 1 ? "" : "s"}?`}
+              message="They're removed from every batch and can no longer sign in."
+              consequences={["Their progress, submitted work and marks are deleted.", "Parent logins stay, but won't show these students."]}
+              confirmLabel="Delete students"
               variant="ghost"
+              size="lg"
             >
               <Trash2 data-icon="inline-start" />
               Delete selected
             </ConfirmSubmitButton>
           </form>
-          <Button type="button" variant="ghost" onClick={clearSelection}>
+          <Button type="button" variant="ghost" size="lg" onClick={clearSelection}>
             Clear selection
           </Button>
         </div>
@@ -420,7 +416,9 @@ function StudentCards({
               />
               <div className="min-w-0">
                 <h2 className="font-heading truncate text-title-2 font-semibold">
-                  {student.name}
+                  <Link href={studentManagePath(student.id)} className="hover:underline">
+                    {student.name}
+                  </Link>
                 </h2>
                 <p className="mt-1 truncate text-sm text-content-muted">
                   {student.email}
@@ -480,7 +478,9 @@ function StudentList({
               aria-label={`Select ${student.name}`}
             />
             <div className="min-w-48 flex-1">
-              <p className="font-heading font-semibold">{student.name}</p>
+              <Link href={studentManagePath(student.id)} className="font-heading font-semibold hover:underline">
+                {student.name}
+              </Link>
               <p className="truncate text-sm text-content-muted">
                 {student.email} · {student.contactNumber}
               </p>
@@ -522,7 +522,7 @@ function StudentTable({
   return (
     <div className="overflow-hidden rounded-xl bg-surface ring-1 ring-line">
       <table className="w-full text-sm">
-        <thead className="bg-sunken text-left text-content-muted">
+        <thead className="border-b border-line bg-sunken/60 text-left text-xs tracking-wide text-content-subtle uppercase">
           <tr>
             <th className="w-10 px-4 py-3">
               <input
@@ -562,7 +562,9 @@ function StudentTable({
                   />
                 </td>
                 <td className="px-4 py-3">
-                  <p className="font-medium">{student.name}</p>
+                  <Link href={studentManagePath(student.id)} className="font-medium hover:underline">
+                    {student.name}
+                  </Link>
                   <p className="text-xs text-content-muted sm:hidden">
                     {student.email}
                   </p>

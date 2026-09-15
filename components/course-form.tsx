@@ -46,14 +46,14 @@ export function CourseForm({
       </div>
 
       {state.error ? (
-        <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <p className="rounded-lg bg-danger-subtle px-3 py-2 text-sm text-danger-subtle-fg">
           {state.error}
         </p>
       ) : null}
 
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={pending}>
-          {pending ? "Saving..." : submitLabel}
+          {pending ? "Saving…" : submitLabel}
         </Button>
         <Button asChild variant="outline">
           <Link href={cancelHref}>Cancel</Link>

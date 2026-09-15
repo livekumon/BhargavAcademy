@@ -1,5 +1,6 @@
 "use server";
 
+import { flash } from "@/lib/flash";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -80,10 +81,12 @@ export async function createCourse(
     });
     revalidatePath("/dashboard/courses");
     revalidatePath(batchPath(batchId));
+    await flash(`${title} created`);
     redirect(batchPath(batchId));
   }
 
   revalidatePath("/dashboard/courses");
+  await flash(`${title} created`, { description: "Add chapters next." });
   redirect(`/dashboard/courses/${id}`);
 }
 
@@ -121,8 +124,8 @@ export async function attachCourseToBatch(
     courseId,
     createdAt: new Date(),
   });
-
   revalidatePath(batchPath(batchId));
+  await flash(`${course.title} attached to ${batch.name}`);
   redirect(batchPath(batchId));
 }
 
@@ -156,9 +159,11 @@ export async function updateCourse(
   if (batchId) {
     revalidatePath(batchPath(batchId));
     revalidatePath(coursePath(batchId, courseId));
+    await flash("Course saved");
     redirect(coursePath(batchId, courseId));
   }
 
+  await flash("Course saved");
   redirect(`/dashboard/courses/${courseId}`);
 }
 
@@ -197,8 +202,8 @@ export async function detachCourse(batchId: string, courseId: string) {
     .where(
       and(eq(batchCourses.batchId, batchId), eq(batchCourses.courseId, courseId)),
     );
-
   revalidatePath(batchPath(batchId));
+  await flash(`${owned.course.title} detached`);
   redirect(batchPath(batchId));
 }
 
@@ -218,5 +223,6 @@ export async function deleteCourse(courseId: string) {
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/courses");
+  await flash("Course deleted");
   redirect("/dashboard/courses");
 }

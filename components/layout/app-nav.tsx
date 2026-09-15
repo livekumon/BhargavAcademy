@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation"
 import {
   BookMarked,
   GraduationCap,
+  HeartHandshake,
+  Inbox,
   LayoutGrid,
   LogOut,
   Menu,
@@ -58,6 +60,18 @@ const navByRole: Record<AppRole, { home: string; label: string; items: NavItem[]
         isActive: (p) => p.startsWith("/dashboard/students"),
       },
       {
+        href: "/dashboard/parents",
+        label: "Parents",
+        icon: HeartHandshake,
+        isActive: (p) => p.startsWith("/dashboard/parents"),
+      },
+      {
+        href: "/dashboard/leads",
+        label: "Leads",
+        icon: Inbox,
+        isActive: (p) => p.startsWith("/dashboard/leads"),
+      },
+      {
         href: "/dashboard/courses",
         label: "Course library",
         icon: BookMarked,
@@ -97,7 +111,7 @@ const navByRole: Record<AppRole, { home: string; label: string; items: NavItem[]
         href: "/parent",
         label: "My children",
         icon: Users,
-        isActive: () => true,
+        isActive: (p) => p === "/parent" || p.startsWith("/parent/students"),
       },
     ],
   },

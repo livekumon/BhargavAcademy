@@ -1040,6 +1040,120 @@ export async function getStudentMarkEntries(studentId: string) {
   return [...byId.values()];
 }
 
+export type ParentDirectoryStudent = {
+  id: string;
+  name: string;
+  email: string;
+  batches: { id: string; name: string }[];
+  currentParent: { id: string; name: string } | null;
+};
+
+export type TeacherParentRow = {
+  id: string;
+  name: string;
+  email: string;
+  mustChangePassword: boolean;
+  students: { id: string; name: string; email: string }[];
+};
+
+export async function getTeacherParentPickerStudents(
+  teacherId: string,
+): Promise<ParentDirectoryStudent[]> {
+  const directory = await getTeacherStudents(teacherId);
+  if (directory.length === 0) return [];
+
+  const links = await db
+    .select({
+      studentId: parentStudents.studentId,
+      parentId: parents.id,
+      parentName: parents.name,
+    })
+    .from(parentStudents)
+    .innerJoin(parents, eq(parentStudents.parentId, parents.id))
+    .where(
+      inArray(
+        parentStudents.studentId,
+        directory.map((student) => student.id),
+      ),
+    );
+
+  const parentByStudent = new Map(
+    links.map((row) => [
+      row.studentId,
+      { id: row.parentId, name: row.parentName },
+    ]),
+  );
+
+  return directory.map((student) => ({
+    id: student.id,
+    name: student.name,
+    email: student.email,
+    batches: student.batches,
+    currentParent: parentByStudent.get(student.id) ?? null,
+  }));
+}
+
+export async function getTeacherParents(
+  teacherId: string,
+): Promise<TeacherParentRow[]> {
+  await ensureDatabase();
+
+  const directory = await getTeacherStudents(teacherId);
+  if (directory.length === 0) return [];
+
+  const studentIds = directory.map((student) => student.id);
+  const rows = await db
+    .select({
+      parent: parents,
+      studentId: students.id,
+      studentName: students.name,
+      studentEmail: students.email,
+    })
+    .from(parentStudents)
+    .innerJoin(parents, eq(parentStudents.parentId, parents.id))
+    .innerJoin(students, eq(parentStudents.studentId, students.id))
+    .where(inArray(parentStudents.studentId, studentIds))
+    .orderBy(asc(parents.name), asc(students.name));
+
+  const byId = new Map<string, TeacherParentRow>();
+  for (const row of rows) {
+    const current = byId.get(row.parent.id);
+    if (current) {
+      if (!current.students.some((student) => student.id === row.studentId)) {
+        current.students.push({
+          id: row.studentId,
+          name: row.studentName,
+          email: row.studentEmail,
+        });
+      }
+      continue;
+    }
+    byId.set(row.parent.id, {
+      id: row.parent.id,
+      name: row.parent.name,
+      email: row.parent.email,
+      mustChangePassword: row.parent.mustChangePassword,
+      students: [
+        {
+          id: row.studentId,
+          name: row.studentName,
+          email: row.studentEmail,
+        },
+      ],
+    });
+  }
+
+  return [...byId.values()];
+}
+
+export async function getOwnedParentForTeacher(
+  teacherId: string,
+  parentId: string,
+) {
+  const list = await getTeacherParents(teacherId);
+  return list.find((parent) => parent.id === parentId) ?? null;
+}
+
 export async function getStudentMarksWorkspace(studentId: string) {
   const enrollments = await getStudentEnrollments(studentId);
   const batchesWithCourses = await Promise.all(

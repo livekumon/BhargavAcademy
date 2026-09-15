@@ -5,6 +5,9 @@ export const teachers = sqliteTable("teachers", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  mustChangePassword: integer("must_change_password", { mode: "boolean" })
+    .notNull()
+    .default(true),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 
@@ -28,6 +31,9 @@ export const students = sqliteTable("students", {
   contactNumber: text("contact_number").notNull(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  mustChangePassword: integer("must_change_password", { mode: "boolean" })
+    .notNull()
+    .default(true),
   syllabus: text("syllabus").notNull().default(""),
   exam: text("exam").notNull().default(""),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
@@ -86,6 +92,7 @@ export const chapterMaterials = sqliteTable("chapter_materials", {
   pdfOriginalName: text("pdf_original_name"),
   kind: text("kind").notNull().default("class_material"),
   instructions: text("instructions").notNull().default(""),
+  dueAt: integer("due_at", { mode: "timestamp" }),
   position: integer("position").notNull().default(0),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
@@ -118,6 +125,9 @@ export const parents = sqliteTable("parents", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  mustChangePassword: integer("must_change_password", { mode: "boolean" })
+    .notNull()
+    .default(true),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 
@@ -198,6 +208,19 @@ export const parentStudents = sqliteTable(
   ],
 );
 
+export const leads = sqliteTable("leads", {
+  id: text("id").primaryKey(),
+  parentName: text("parent_name").notNull(),
+  studentName: text("student_name").notNull(),
+  phone: text("phone").notNull(),
+  className: text("class_name").notNull(),
+  subjects: text("subjects").notNull().default(""),
+  message: text("message").notNull().default(""),
+  status: text("status").notNull().default("new"),
+  notes: text("notes").notNull().default(""),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+});
+
 export type Teacher = typeof teachers.$inferSelect;
 export type Batch = typeof batches.$inferSelect;
 export type Student = typeof students.$inferSelect;
@@ -211,3 +234,4 @@ export type StudentBatch = typeof studentBatches.$inferSelect;
 export type StudentChapterMark = typeof studentChapterMarks.$inferSelect;
 export type StudentMarkChapter = typeof studentMarkChapters.$inferSelect;
 export type LookupOption = typeof lookupOptions.$inferSelect;
+export type Lead = typeof leads.$inferSelect;

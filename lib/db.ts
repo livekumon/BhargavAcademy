@@ -1,5 +1,5 @@
 import { createClient } from "@libsql/client";
-import { hashSync } from "bcryptjs";
+import { compareSync, hashSync } from "bcryptjs";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/libsql";
 import fs from "node:fs";
@@ -8,16 +8,21 @@ import { saveDummyPdf } from "./files";
 import { EXAM_PAPERS, EXAMS, SYLLABUSES } from "./academics";
 import * as schema from "./schema";
 import {
+  ADMIN_EMAIL,
+  DEFAULT_PASSWORD,
+  isLegacyStudentEmail,
+  LEGACY_PARENT_EMAIL,
+  LEGACY_TEACHER_EMAIL,
+  uniqueAcademyEmail,
+} from "./identity";
+import {
   dummyBatches,
   dummyCourses,
   dummyExtraEnrollments,
   dummyMaterialId,
   dummyParents,
-  dummyStudentEmail,
   PROTOTYPE_ENGLISH_BATCH_ID,
   PROTOTYPE_EVENING_BATCH_ID,
-  SAMPLE_PARENT_PASSWORD,
-  SAMPLE_STUDENT_PASSWORD,
 } from "./seed";
 
 const dataDir = process.env.VERCEL
@@ -36,7 +41,20 @@ export const db = drizzle(client, { schema });
 let initialized = false;
 let initializing: Promise<void> | null = null;
 
+let ensuring: Promise<void> | null = null;
+
+/**
+ * Concurrent callers share one in-flight run, so two requests arriving
+ * together can't both decide a table is missing and both create it.
+ */
 export async function ensureDatabase() {
+  ensuring ??= runEnsureDatabase().finally(() => {
+    ensuring = null;
+  });
+  await ensuring;
+}
+
+async function runEnsureDatabase() {
   if (!initialized) {
     if (!initializing) {
       initializing = initializeDatabase().finally(() => {
@@ -50,6 +68,7 @@ export async function ensureDatabase() {
   await allowMultipleChapterPdfs();
   await ensureMaterialKindSchema();
   await ensureOneCoursePerBatch();
+  await ensureMaterialDueColumn();
   await seedMissingDummyBatches();
   await seedMissingDummyMaterials();
   await ensureStudentLoginSchema();
@@ -58,6 +77,9 @@ export async function ensureDatabase() {
   await ensureStudentBatchSchema();
   await ensureStudentMarksSchema();
   await ensureLookupSchema();
+  await ensureLeadsSchema();
+  await ensureMustChangePasswordSchema();
+  await ensureLeadNotesColumn();
 }
 
 async function initializeDatabase() {
@@ -71,6 +93,7 @@ async function initializeDatabase() {
       name TEXT NOT NULL,
       email TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
+      must_change_password INTEGER NOT NULL DEFAULT 1,
       created_at INTEGER NOT NULL
     )
   `);
@@ -92,6 +115,7 @@ async function initializeDatabase() {
       contact_number TEXT NOT NULL,
       email TEXT UNIQUE,
       password_hash TEXT,
+      must_change_password INTEGER NOT NULL DEFAULT 1,
       syllabus TEXT NOT NULL DEFAULT '',
       exam TEXT NOT NULL DEFAULT '',
       created_at INTEGER NOT NULL
@@ -137,30 +161,43 @@ async function initializeDatabase() {
       pdf_original_name TEXT,
       kind TEXT NOT NULL DEFAULT 'class_material',
       instructions TEXT NOT NULL DEFAULT '',
+      due_at INTEGER,
       position INTEGER NOT NULL DEFAULT 0,
       updated_at INTEGER NOT NULL
     )
   `);
+  await ensureMaterialDueColumn();
   await createAssignmentTable();
   await createParentTables();
   await createStudentBatchTable();
+  await ensureMustChangePasswordSchema();
 
   const existing = await db
     .select({ id: schema.teachers.id })
     .from(schema.teachers)
-    .where(eq(schema.teachers.email, "teacher@academy.test"))
+    .where(eq(schema.teachers.email, ADMIN_EMAIL))
     .limit(1);
 
-  let teacherId = existing[0]?.id ?? "teacher-demo";
+  const legacyTeacher =
+    existing.length === 0
+      ? await db
+          .select({ id: schema.teachers.id })
+          .from(schema.teachers)
+          .where(eq(schema.teachers.email, LEGACY_TEACHER_EMAIL))
+          .limit(1)
+      : [];
 
-  if (existing.length === 0) {
+  let teacherId = existing[0]?.id ?? legacyTeacher[0]?.id ?? "teacher-demo";
+
+  if (existing.length === 0 && legacyTeacher.length === 0) {
     await db
       .insert(schema.teachers)
       .values({
         id: teacherId,
-        name: "Demo Teacher",
-        email: "teacher@academy.test",
-        passwordHash: hashSync("Teacher123!", 10),
+        name: "Bhargav",
+        email: ADMIN_EMAIL,
+        passwordHash: hashSync(DEFAULT_PASSWORD, 10),
+        mustChangePassword: true,
         createdAt: new Date(),
       })
       .onConflictDoNothing();
@@ -168,7 +205,7 @@ async function initializeDatabase() {
     const [created] = await db
       .select({ id: schema.teachers.id })
       .from(schema.teachers)
-      .where(eq(schema.teachers.email, "teacher@academy.test"))
+      .where(eq(schema.teachers.email, ADMIN_EMAIL))
       .limit(1);
     teacherId = created?.id ?? teacherId;
   }
@@ -224,12 +261,8 @@ async function initializeDatabase() {
         })
         .onConflictDoNothing();
 
-      const studentPasswordHash = hashSync(SAMPLE_STUDENT_PASSWORD, 10);
+      const studentPasswordHash = hashSync(DEFAULT_PASSWORD, 10);
       for (const student of batch.students) {
-        const email =
-          "email" in student && student.email
-            ? student.email
-            : dummyStudentEmail(student.id);
         await db
           .insert(schema.students)
           .values({
@@ -237,8 +270,9 @@ async function initializeDatabase() {
             batchId: batch.id,
             name: student.name,
             contactNumber: student.contactNumber,
-            email,
+            email: student.email,
             passwordHash: studentPasswordHash,
+            mustChangePassword: true,
             createdAt: now,
           })
           .onConflictDoNothing();
@@ -352,15 +386,10 @@ async function ensureStudentLoginSchema() {
     "SELECT id FROM students WHERE password_hash IS NULL OR password_hash = '' LIMIT 1",
   );
   const passwordHash =
-    missing.rows.length > 0 ? hashSync(SAMPLE_STUDENT_PASSWORD, 10) : "";
+    missing.rows.length > 0 ? hashSync(DEFAULT_PASSWORD, 10) : "";
 
   for (const batch of dummyBatches) {
     for (const student of batch.students) {
-      const email =
-        "email" in student && student.email
-          ? student.email
-          : dummyStudentEmail(student.id);
-
       await client.execute({
         sql: `
           UPDATE students
@@ -368,7 +397,7 @@ async function ensureStudentLoginSchema() {
               password_hash = COALESCE(NULLIF(password_hash, ''), ?)
           WHERE id = ?
         `,
-        args: [email, passwordHash, student.id],
+        args: [student.email, passwordHash, student.id],
       });
     }
   }
@@ -404,6 +433,7 @@ async function allowMultipleChapterPdfs() {
       pdf_original_name TEXT,
       kind TEXT NOT NULL DEFAULT 'class_material',
       instructions TEXT NOT NULL DEFAULT '',
+      due_at INTEGER,
       position INTEGER NOT NULL DEFAULT 0,
       updated_at INTEGER NOT NULL
     )
@@ -543,11 +573,7 @@ async function ensureOneCoursePerBatch() {
 }
 
 async function seedMissingDummyBatches() {
-  const [teacher] = await db
-    .select({ id: schema.teachers.id })
-    .from(schema.teachers)
-    .where(eq(schema.teachers.email, "teacher@academy.test"))
-    .limit(1);
+  const teacher = await getPrototypeTeacher();
   if (!teacher) return;
 
   const now = new Date();
@@ -866,7 +892,7 @@ async function migrateStudentMarksToMultiChapter() {
 
   if (tables.rows.length === 0) {
     await client.execute(`
-      CREATE TABLE student_chapter_marks (
+      CREATE TABLE IF NOT EXISTS student_chapter_marks (
         id TEXT PRIMARY KEY,
         student_id TEXT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
         batch_id TEXT NOT NULL REFERENCES batches(id) ON DELETE CASCADE,
@@ -943,6 +969,7 @@ async function createParentTables() {
       name TEXT NOT NULL,
       email TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
+      must_change_password INTEGER NOT NULL DEFAULT 1,
       created_at INTEGER NOT NULL
     )
   `);
@@ -967,16 +994,12 @@ async function ensureParentSchema() {
   );
   const studentPasswordHash =
     missingDummyStudent.rows.length === 0
-      ? hashSync(SAMPLE_STUDENT_PASSWORD, 10)
+      ? hashSync(DEFAULT_PASSWORD, 10)
       : "";
 
   if (studentPasswordHash) {
     for (const batch of dummyBatches) {
       for (const student of batch.students) {
-        const email =
-          "email" in student && student.email
-            ? student.email
-            : dummyStudentEmail(student.id);
         await db
           .insert(schema.students)
           .values({
@@ -984,8 +1007,9 @@ async function ensureParentSchema() {
             batchId: batch.id,
             name: student.name,
             contactNumber: student.contactNumber,
-            email,
+            email: student.email,
             passwordHash: studentPasswordHash,
+            mustChangePassword: true,
             createdAt: now,
           })
           .onConflictDoNothing();
@@ -994,11 +1018,11 @@ async function ensureParentSchema() {
   }
 
   const missingParent = await client.execute({
-    sql: "SELECT id FROM parents WHERE email = ? LIMIT 1",
-    args: [dummyParents[0].email],
+    sql: "SELECT id FROM parents WHERE id = ? OR email = ? OR email = ? LIMIT 1",
+    args: [dummyParents[0].id, dummyParents[0].email, LEGACY_PARENT_EMAIL],
   });
   const parentPasswordHash =
-    missingParent.rows.length === 0 ? hashSync(SAMPLE_PARENT_PASSWORD, 10) : "";
+    missingParent.rows.length === 0 ? hashSync(DEFAULT_PASSWORD, 10) : "";
 
   for (const parent of dummyParents) {
     if (parentPasswordHash) {
@@ -1009,6 +1033,7 @@ async function ensureParentSchema() {
           name: parent.name,
           email: parent.email,
           passwordHash: parentPasswordHash,
+          mustChangePassword: true,
           createdAt: now,
         })
         .onConflictDoNothing();
@@ -1129,4 +1154,241 @@ async function ensureLookupSchema() {
   ];
 
   await db.insert(schema.lookupOptions).values(seeds);
+}
+
+async function ensureLeadsSchema() {
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS leads (
+      id TEXT PRIMARY KEY,
+      parent_name TEXT NOT NULL,
+      student_name TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      class_name TEXT NOT NULL,
+      subjects TEXT NOT NULL DEFAULT '',
+      message TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'new',
+      notes TEXT NOT NULL DEFAULT '',
+      created_at INTEGER NOT NULL
+    )
+  `);
+}
+
+let passwordSchemaReady = false;
+let cachedDefaultPasswordHash: string | null = null;
+
+function defaultPasswordHash() {
+  cachedDefaultPasswordHash ??= hashSync(DEFAULT_PASSWORD, 10);
+  return cachedDefaultPasswordHash;
+}
+
+async function getPrototypeTeacher() {
+  for (const email of [ADMIN_EMAIL, LEGACY_TEACHER_EMAIL]) {
+    const [teacher] = await db
+      .select()
+      .from(schema.teachers)
+      .where(eq(schema.teachers.email, email))
+      .limit(1);
+    if (teacher) return teacher;
+  }
+
+  const [teacher] = await db
+    .select()
+    .from(schema.teachers)
+    .where(eq(schema.teachers.id, "teacher-demo"))
+    .limit(1);
+  return teacher ?? null;
+}
+
+export async function loadTakenEmails() {
+  const taken = new Set<string>([ADMIN_EMAIL]);
+  const [teacherRows, studentRows, parentRows] = await Promise.all([
+    db.select({ email: schema.teachers.email }).from(schema.teachers),
+    db.select({ email: schema.students.email }).from(schema.students),
+    db.select({ email: schema.parents.email }).from(schema.parents),
+  ]);
+
+  for (const row of [...teacherRows, ...studentRows, ...parentRows]) {
+    if (row.email) taken.add(row.email.toLowerCase());
+  }
+
+  return taken;
+}
+
+export async function nextAcademyEmail(name: string, extraTaken: Iterable<string> = []) {
+  const taken = await loadTakenEmails();
+  for (const email of extraTaken) {
+    if (email) taken.add(email.toLowerCase());
+  }
+  return uniqueAcademyEmail(name, taken);
+}
+
+async function ensureMustChangePasswordSchema() {
+  if (passwordSchemaReady) return;
+
+  for (const table of ["teachers", "students", "parents"] as const) {
+    const info = await client.execute(`PRAGMA table_info(${table})`);
+    if (info.rows.length === 0) continue;
+    const columns = info.rows.map((row) => String(row.name));
+    if (!columns.includes("must_change_password")) {
+      await client.execute(
+        `ALTER TABLE ${table} ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 1`,
+      );
+    }
+  }
+
+  await migrateDemoIdentities();
+  passwordSchemaReady = true;
+}
+
+const DEMO_PASSWORDS = ["Teacher123!", "Student123!", "Parent123!", DEFAULT_PASSWORD];
+
+function usesDemoPassword(passwordHash: string | null | undefined) {
+  if (!passwordHash) return true;
+  return DEMO_PASSWORDS.some((password) => compareSync(password, passwordHash));
+}
+
+async function migrateDemoIdentities() {
+  const defaultHash = defaultPasswordHash();
+  const [legacyTeacher] = await db
+    .select()
+    .from(schema.teachers)
+    .where(eq(schema.teachers.email, LEGACY_TEACHER_EMAIL))
+    .limit(1);
+  const [adminTeacher] = await db
+    .select()
+    .from(schema.teachers)
+    .where(eq(schema.teachers.email, ADMIN_EMAIL))
+    .limit(1);
+
+  if (legacyTeacher && !adminTeacher) {
+    await db
+      .update(schema.teachers)
+      .set({
+        email: ADMIN_EMAIL,
+        name: legacyTeacher.name === "Demo Teacher" ? "Bhargav" : legacyTeacher.name,
+      })
+      .where(eq(schema.teachers.id, legacyTeacher.id));
+  } else if (adminTeacher?.name === "Demo Teacher") {
+    await db
+      .update(schema.teachers)
+      .set({ name: "Bhargav" })
+      .where(eq(schema.teachers.id, adminTeacher.id));
+  }
+
+  const demoTeacher = await getPrototypeTeacher();
+  if (demoTeacher && usesDemoPassword(demoTeacher.passwordHash)) {
+    await db
+      .update(schema.teachers)
+      .set({
+        passwordHash: defaultHash,
+        mustChangePassword: true,
+      })
+      .where(eq(schema.teachers.id, demoTeacher.id));
+  }
+
+  const taken = await loadTakenEmails();
+
+  for (const batch of dummyBatches) {
+    for (const student of batch.students) {
+      const [row] = await db
+        .select({
+          id: schema.students.id,
+          email: schema.students.email,
+          passwordHash: schema.students.passwordHash,
+          mustChangePassword: schema.students.mustChangePassword,
+        })
+        .from(schema.students)
+        .where(eq(schema.students.id, student.id))
+        .limit(1);
+      if (!row) continue;
+
+      if (!row.email || isLegacyStudentEmail(row.email)) {
+        if (row.email) taken.delete(row.email.toLowerCase());
+        const email = taken.has(student.email)
+          ? uniqueAcademyEmail(student.name, taken)
+          : student.email;
+        taken.add(email);
+        await db
+          .update(schema.students)
+          .set({ email })
+          .where(eq(schema.students.id, student.id));
+      }
+
+      if (usesDemoPassword(row.passwordHash)) {
+        await db
+          .update(schema.students)
+          .set({
+            passwordHash: defaultHash,
+            mustChangePassword: true,
+          })
+          .where(eq(schema.students.id, student.id));
+      }
+    }
+  }
+
+  for (const parent of dummyParents) {
+    const [byId] = await db
+      .select()
+      .from(schema.parents)
+      .where(eq(schema.parents.id, parent.id))
+      .limit(1);
+    const [byLegacy] = byId
+      ? [byId]
+      : await db
+          .select()
+          .from(schema.parents)
+          .where(eq(schema.parents.email, LEGACY_PARENT_EMAIL))
+          .limit(1);
+    const current = byId ?? byLegacy;
+    if (!current) continue;
+
+    if (
+      current.email === LEGACY_PARENT_EMAIL ||
+      current.email.endsWith("@academy.test")
+    ) {
+      taken.delete(current.email.toLowerCase());
+      const email = taken.has(parent.email)
+        ? uniqueAcademyEmail(parent.name, taken)
+        : parent.email;
+      taken.add(email);
+      await db
+        .update(schema.parents)
+        .set({ email })
+        .where(eq(schema.parents.id, current.id));
+    }
+
+    if (usesDemoPassword(current.passwordHash)) {
+      await db
+        .update(schema.parents)
+        .set({
+          passwordHash: defaultHash,
+          mustChangePassword: true,
+        })
+        .where(eq(schema.parents.id, current.id));
+    }
+  }
+}
+
+/*
+ * Columns added with the teacher portal redesign. The due date is checked
+ * before any seed insert, and again after the legacy chapter_materials
+ * rebuild, because both write rows through the current Drizzle schema.
+ */
+async function addColumnIfMissing(table: string, column: string, definition: string) {
+  const columns = (await client.execute(`PRAGMA table_info(${table})`)).rows.map((row) => String(row.name));
+  if (columns.length === 0 || columns.includes(column)) return;
+  try {
+    await client.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  } catch (error) {
+    // Another process (a parallel build worker) may have just added it.
+    if (!(error instanceof Error && /duplicate column/i.test(error.message))) throw error;
+  }
+}
+
+async function ensureMaterialDueColumn() {
+  await addColumnIfMissing("chapter_materials", "due_at", "INTEGER");
+}
+
+async function ensureLeadNotesColumn() {
+  await addColumnIfMissing("leads", "notes", "TEXT NOT NULL DEFAULT ''");
 }

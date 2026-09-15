@@ -10,8 +10,13 @@ import {
   createParentSession,
   createSession,
   createStudentSession,
+  requireParent,
+  requireStudent,
+  requireTeacher,
 } from "@/lib/auth";
 import { db, ensureDatabase } from "@/lib/db";
+import { flash } from "@/lib/flash";
+import { validateChangedPassword } from "@/lib/identity";
 import { parents, students, teachers } from "@/lib/schema";
 
 export type AuthState = {
@@ -57,6 +62,7 @@ export async function registerTeacher(
     name,
     email,
     passwordHash: await hash(password, 10),
+    mustChangePassword: false,
     createdAt: new Date(),
   };
 
@@ -89,7 +95,7 @@ export async function loginTeacher(
     name: teacher.name,
     email: teacher.email,
   });
-  redirect("/dashboard");
+  redirect(teacher.mustChangePassword ? "/login/set-password" : "/dashboard");
 }
 
 export async function logoutTeacher() {
@@ -121,7 +127,7 @@ export async function loginStudent(
     name: student.name,
     email: student.email,
   });
-  redirect("/student");
+  redirect(student.mustChangePassword ? "/student/login/set-password" : "/student");
 }
 
 export async function logoutStudent() {
@@ -153,10 +159,134 @@ export async function loginParent(
     name: parent.name,
     email: parent.email,
   });
-  redirect("/parent");
+  redirect(parent.mustChangePassword ? "/parent/login/set-password" : "/parent");
 }
 
 export async function logoutParent() {
   await clearParentSession();
   redirect("/parent/login");
+}
+
+async function readNewPassword(formData: FormData) {
+  const currentPassword = String(formData.get("currentPassword") ?? "");
+  const password = String(formData.get("password") ?? "");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+  const error = validateChangedPassword(password, confirmPassword);
+  if (!currentPassword) {
+    return { error: "Enter your current password." };
+  }
+  if (error) {
+    return { error };
+  }
+  return { currentPassword, password };
+}
+
+export async function setTeacherPassword(
+  _prev: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const teacher = await requireTeacher({ allowPendingPassword: true });
+  const parsed = await readNewPassword(formData);
+  if ("error" in parsed) return parsed;
+
+  if (!(await compare(parsed.currentPassword, teacher.passwordHash))) {
+    return { error: "Current password is incorrect." };
+  }
+
+  await db
+    .update(teachers)
+    .set({
+      passwordHash: await hash(parsed.password, 10),
+      mustChangePassword: false,
+    })
+    .where(eq(teachers.id, teacher.id));
+
+  redirect("/dashboard");
+}
+
+export async function setStudentPassword(
+  _prev: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const student = await requireStudent({ allowPendingPassword: true });
+  const parsed = await readNewPassword(formData);
+  if ("error" in parsed) return parsed;
+
+  if (
+    !student.passwordHash ||
+    !(await compare(parsed.currentPassword, student.passwordHash))
+  ) {
+    return { error: "Current password is incorrect." };
+  }
+
+  await db
+    .update(students)
+    .set({
+      passwordHash: await hash(parsed.password, 10),
+      mustChangePassword: false,
+    })
+    .where(eq(students.id, student.id));
+
+  redirect("/student");
+}
+
+export async function setParentPassword(
+  _prev: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const parent = await requireParent({ allowPendingPassword: true });
+  const parsed = await readNewPassword(formData);
+  if ("error" in parsed) return parsed;
+
+  if (!(await compare(parsed.currentPassword, parent.passwordHash))) {
+    return { error: "Current password is incorrect." };
+  }
+
+  await db
+    .update(parents)
+    .set({
+      passwordHash: await hash(parsed.password, 10),
+      mustChangePassword: false,
+    })
+    .where(eq(parents.id, parent.id));
+
+  redirect("/parent");
+}
+
+export async function changeTeacherPassword(
+  _prev: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const teacher = await requireTeacher();
+  const parsed = await readNewPassword(formData);
+  if ("error" in parsed) return parsed;
+
+  if (!(await compare(parsed.currentPassword, teacher.passwordHash))) {
+    return { error: "Current password is incorrect." };
+  }
+
+  await db
+    .update(teachers)
+    .set({ passwordHash: await hash(parsed.password, 10), mustChangePassword: false })
+    .where(eq(teachers.id, teacher.id));
+
+  await flash("Password changed", { description: "Use it the next time you sign in." });
+  redirect("/dashboard/settings?section=account");
+}
+
+export async function updateTeacherName(
+  _prev: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const teacher = await requireTeacher();
+  const name = String(formData.get("name") ?? "").trim();
+  if (name.length < 2) {
+    return { error: "Please enter your full name." };
+  }
+
+  await db.update(teachers).set({ name }).where(eq(teachers.id, teacher.id));
+  // The session carries the name shown in the sidebar, so refresh it.
+  await createSession({ id: teacher.id, name, email: teacher.email });
+  await flash("Name updated");
+  redirect("/dashboard/settings?section=account");
 }

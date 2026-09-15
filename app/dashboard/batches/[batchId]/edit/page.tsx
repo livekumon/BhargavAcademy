@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BatchForm } from "@/components/batch-form";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormPage } from "@/components/teacher/form-page";
 import { updateBatch } from "@/lib/actions/batches";
 import { requireTeacher } from "@/lib/auth";
 import { batchPath } from "@/lib/paths";
@@ -25,12 +25,11 @@ export default async function EditBatchPage({
   }
 
   return (
-    <Card className="mx-auto max-w-2xl">
-      <CardHeader>
-        <CardTitle className="font-heading text-3xl">Edit batch</CardTitle>
-        <CardDescription>Update the batch name or description.</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <FormPage
+      crumbs={[{ label: "Batches", href: "/dashboard/batches" }, { label: batch.name, href: `/dashboard/batches/${batch.id}` }, { label: "Edit" }]}
+      title={<>Edit batch</>}
+      description={<>Update the batch name or description.</>}
+    >
         <BatchForm
           action={updateBatch.bind(null, batch.id)}
           defaultValues={{
@@ -40,7 +39,6 @@ export default async function EditBatchPage({
           submitLabel="Save changes"
           cancelHref={batchPath(batch.id)}
         />
-      </CardContent>
-    </Card>
+      </FormPage>
   );
 }
