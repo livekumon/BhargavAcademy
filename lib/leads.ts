@@ -11,6 +11,12 @@ import { leads, type Lead } from "./schema";
 export type LeadStatus = LeadStage;
 
 export const LEAD_STATUS_LABELS = LEAD_STAGE_LABELS;
+/** Singular alias used by the teacher screens. */
+export const LEAD_STATUS_LABEL = LEAD_STAGE_LABELS;
+
+export function asLeadStatus(value: unknown): LeadStatus {
+  return isLeadStage(value) ? value : "new";
+}
 
 export type LeadRecord = {
   id: string;
@@ -23,6 +29,7 @@ export type LeadRecord = {
   status: LeadStatus;
   assignedTeacherId: string | null;
   contactedAt: string | null;
+  notes: string;
   createdAt: string;
 };
 
@@ -53,6 +60,7 @@ function toRecord(lead: Lead): LeadRecord {
     status: isLeadStage(lead.status) ? lead.status : "new",
     assignedTeacherId: lead.assignedTeacherId ?? null,
     contactedAt: toIso(lead.contactedAt),
+    notes: lead.notes ?? "",
     createdAt: toIso(lead.createdAt) ?? new Date().toISOString(),
   };
 }
@@ -82,6 +90,7 @@ function parseStoredLead(value: unknown): LeadRecord | null {
     assignedTeacherId:
       typeof row.assignedTeacherId === "string" ? row.assignedTeacherId : null,
     contactedAt: typeof row.contactedAt === "string" ? row.contactedAt : null,
+    notes: typeof row.notes === "string" ? row.notes : "",
     createdAt:
       typeof row.createdAt === "string"
         ? row.createdAt
@@ -102,6 +111,7 @@ export async function createLead(input: LeadInput): Promise<LeadRecord> {
     status: "new",
     assignedTeacherId: null,
     contactedAt: null,
+    notes: "",
     createdAt: new Date().toISOString(),
   };
 
@@ -159,6 +169,7 @@ export async function getLead(id: string) {
 export type LeadPatch = {
   status?: LeadStatus;
   assignedTeacherId?: string | null;
+  notes?: string;
 };
 
 export async function updateLead(id: string, patch: LeadPatch) {
@@ -178,12 +189,16 @@ export async function updateLead(id: string, patch: LeadPatch) {
   if (patch.assignedTeacherId !== undefined) {
     next.assignedTeacherId = patch.assignedTeacherId;
   }
+  if (patch.notes !== undefined) {
+    next.notes = patch.notes.slice(0, 2000);
+  }
 
   const [existing] = await db.select({ id: leads.id }).from(leads).where(eq(leads.id, id)).limit(1);
   const values = {
     status: next.status,
     assignedTeacherId: next.assignedTeacherId,
     contactedAt: next.contactedAt ? new Date(next.contactedAt) : null,
+    notes: next.notes,
   };
   if (existing) {
     await db.update(leads).set(values).where(eq(leads.id, id));
@@ -211,4 +226,8 @@ export async function updateLead(id: string, patch: LeadPatch) {
 
 export async function updateLeadStatus(id: string, status: LeadStatus) {
   return updateLead(id, { status });
+}
+
+export async function updateLeadNotes(id: string, notes: string) {
+  return updateLead(id, { notes });
 }

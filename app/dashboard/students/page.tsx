@@ -33,9 +33,13 @@ export default async function StudentsPage({
   return (
     <div className="flex flex-col gap-8">
       <PageHeader
-        eyebrow="Directory"
-        title="Your students"
-        description="Add students once, then enroll them in batches. Edit, delete, or open marks from any view."
+        eyebrow="People"
+        title="Students"
+        description={
+          studentList.length > 0
+            ? `${studentList.length} ${studentList.length === 1 ? "student" : "students"} across ${batchList.length} ${batchList.length === 1 ? "batch" : "batches"}. Select several to enroll them together.`
+            : "Add a student once, then enroll them in as many batches as they need."
+        }
         actions={
           <Button asChild size="lg">
             <Link href={newStudentPath()}>

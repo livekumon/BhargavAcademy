@@ -57,7 +57,20 @@ export const db = drizzle(client, { schema });
 let initialized = false;
 let initializing: Promise<void> | null = null;
 
+let ensuring: Promise<void> | null = null;
+
+/**
+ * Concurrent callers share one in-flight run, so two requests arriving
+ * together can't both decide a table is missing and both create it.
+ */
 export async function ensureDatabase() {
+  ensuring ??= runEnsureDatabase().finally(() => {
+    ensuring = null;
+  });
+  await ensuring;
+}
+
+async function runEnsureDatabase() {
   if (!initialized) {
     if (!initializing) {
       initializing = initializeDatabase().finally(() => {
@@ -71,6 +84,7 @@ export async function ensureDatabase() {
   await allowMultipleChapterPdfs();
   await ensureMaterialKindSchema();
   await ensureOneCoursePerBatch();
+  await ensureMaterialDueColumn();
   await seedMissingDummyBatches();
   await seedMissingDummyMaterials();
   await ensureStudentLoginSchema();
@@ -83,6 +97,7 @@ export async function ensureDatabase() {
   await ensureMustChangePasswordSchema();
   await ensureAdminSchema();
   await ensureOwnerAdmin();
+  await ensureLeadNotesColumn();
 }
 
 async function initializeDatabase() {
@@ -164,10 +179,12 @@ async function initializeDatabase() {
       pdf_original_name TEXT,
       kind TEXT NOT NULL DEFAULT 'class_material',
       instructions TEXT NOT NULL DEFAULT '',
+      due_at INTEGER,
       position INTEGER NOT NULL DEFAULT 0,
       updated_at INTEGER NOT NULL
     )
   `);
+  await ensureMaterialDueColumn();
   await createAssignmentTable();
   await createParentTables();
   await createStudentBatchTable();
@@ -437,6 +454,7 @@ async function allowMultipleChapterPdfs() {
       pdf_original_name TEXT,
       kind TEXT NOT NULL DEFAULT 'class_material',
       instructions TEXT NOT NULL DEFAULT '',
+      due_at INTEGER,
       position INTEGER NOT NULL DEFAULT 0,
       updated_at INTEGER NOT NULL
     )
@@ -895,7 +913,7 @@ async function migrateStudentMarksToMultiChapter() {
 
   if (tables.rows.length === 0) {
     await client.execute(`
-      CREATE TABLE student_chapter_marks (
+      CREATE TABLE IF NOT EXISTS student_chapter_marks (
         id TEXT PRIMARY KEY,
         student_id TEXT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
         batch_id TEXT NOT NULL REFERENCES batches(id) ON DELETE CASCADE,
@@ -1172,6 +1190,7 @@ async function ensureLeadsSchema() {
       status TEXT NOT NULL DEFAULT 'new',
       assigned_teacher_id TEXT,
       contacted_at INTEGER,
+      notes TEXT NOT NULL DEFAULT '',
       created_at INTEGER NOT NULL
     )
   `);
@@ -1444,4 +1463,28 @@ async function migrateDemoIdentities() {
         .where(eq(schema.parents.id, current.id));
     }
   }
+}
+
+/*
+ * Columns added with the teacher portal redesign. The due date is checked
+ * before any seed insert, and again after the legacy chapter_materials
+ * rebuild, because both write rows through the current Drizzle schema.
+ */
+async function addColumnIfMissing(table: string, column: string, definition: string) {
+  const columns = (await client.execute(`PRAGMA table_info(${table})`)).rows.map((row) => String(row.name));
+  if (columns.length === 0 || columns.includes(column)) return;
+  try {
+    await client.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  } catch (error) {
+    // Another process (a parallel build worker) may have just added it.
+    if (!(error instanceof Error && /duplicate column/i.test(error.message))) throw error;
+  }
+}
+
+async function ensureMaterialDueColumn() {
+  await addColumnIfMissing("chapter_materials", "due_at", "INTEGER");
+}
+
+async function ensureLeadNotesColumn() {
+  await addColumnIfMissing("leads", "notes", "TEXT NOT NULL DEFAULT ''");
 }

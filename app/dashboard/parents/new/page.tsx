@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Users } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 import { ParentForm } from "@/components/parent-form";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Surface } from "@/components/ui/surface";
 import { createParent } from "@/lib/actions/parents";
 import { requireTeacher } from "@/lib/auth";
 import { newStudentPath, parentsPath } from "@/lib/paths";
@@ -29,7 +25,7 @@ export default async function NewParentPage() {
       <EmptyState
         icon={<Users />}
         title="Add students first"
-        description="A parent login needs at least one student assigned. Add a student, then come back to create the parent."
+        description="A parent login shows at least one child. Add a student, then come back to create the parent."
         action={
           <Button asChild size="lg">
             <Link href={newStudentPath()}>Add a student</Link>
@@ -40,23 +36,15 @@ export default async function NewParentPage() {
   }
 
   return (
-    <Card className="mx-auto max-w-2xl">
-      <CardHeader>
-        <CardTitle className="font-heading text-3xl">Create a parent</CardTitle>
-        <CardDescription>
-          We generate a unique @bhargavacademy.com login from their name unless
-          you type a different email. Assign the students they should see after
-          they sign in.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ParentForm
-          action={createParent}
-          students={students}
-          submitLabel="Create parent"
-          cancelHref={parentsPath()}
-        />
-      </CardContent>
-    </Card>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        breadcrumb={<Breadcrumb items={[{ label: "Parents", href: parentsPath() }, { label: "New parent" }]} />}
+        title="Create a parent login"
+        description="We generate a unique @bhargavacademy.com email from their name unless you type one. Choose the children they should see."
+      />
+      <Surface pad="lg" className="max-w-3xl">
+        <ParentForm action={createParent} students={students} submitLabel="Create parent" cancelHref={parentsPath()} />
+      </Surface>
+    </div>
   );
 }

@@ -321,11 +321,69 @@ function ParentPreview() {
   );
 }
 
+function RegisterPreview() {
+  const steps = [
+    { label: "Create a course", detail: "Grade 10 Physics · 12 chapters", done: true },
+    { label: "Open a batch", detail: "Grade 10 Morning", done: true },
+    { label: "Add students", detail: "Logins created for them and their parents", done: true },
+    { label: "Upload the first PDF", detail: "Motion in a Straight Line", done: false },
+  ];
+
+  return (
+    <>
+      <Surface elevation="xl" pad="none" border="none" className="overflow-hidden rounded-2xl bg-raised">
+        <PreviewHeader
+          eyebrow="Getting started"
+          title="Your academy, ready today"
+          badge={
+            <StatusPill tone="brand" dot>
+              <span className="tabular">3 of 4</span>
+            </StatusPill>
+          }
+        />
+        <ol className="divide-y divide-line">
+          {steps.map((step, index) => (
+            <li key={step.label} className="flex items-center gap-3 px-5 py-3.5">
+              <span
+                className={`tabular flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                  step.done ? "bg-success text-success-fg" : "bg-sunken text-content-muted ring-1 ring-line"
+                }`}
+              >
+                {step.done ? <CheckCircle2 className="size-4" /> : index + 1}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className={`block truncate text-sm font-medium ${step.done ? "text-content-muted" : ""}`}>{step.label}</span>
+                <span className="block truncate text-xs text-content-subtle">{step.detail}</span>
+              </span>
+              {step.done ? null : <StatusPill tone="info">Next</StatusPill>}
+            </li>
+          ))}
+        </ol>
+        <div className="border-t border-line px-5 py-4">
+          <ProgressMeter value={75} label="Setup progress" size="sm" />
+        </div>
+      </Surface>
+
+      <Floating delay={350} className="-bottom-12 -left-8">
+        <Surface elevation="lg" pad="none" border="hairline" className="flex items-center gap-3 bg-raised py-3 pr-5 pl-3">
+          <span className="flex size-9 items-center justify-center rounded-lg bg-brand-subtle text-brand-subtle-fg">
+            <Users className="size-4" />
+          </span>
+          <span className="text-sm">
+            <span className="block font-medium">32 students added</span>
+            <span className="block text-xs text-content-subtle">Parents get their own logins</span>
+          </span>
+        </Surface>
+      </Floating>
+    </>
+  );
+}
+
 const previews: Record<PortalRole | "register", () => ReactNode> = {
   teacher: TeacherPreview,
   student: StudentPreview,
   parent: ParentPreview,
-  register: TeacherPreview,
+  register: RegisterPreview,
 };
 
 /**

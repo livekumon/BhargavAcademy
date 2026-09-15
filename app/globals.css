@@ -482,7 +482,7 @@
   --animate-float: float 7s var(--ease-in-out-quart) infinite;
   --animate-draw: draw 900ms var(--ease-out-quart) both;
 
-  /* Progress rings and trend lines draw in from empty. Needs pathLength="100". */
+  /* Rings and trend lines draw in from empty. Needs pathLength="100". */
   @keyframes draw {
     from {
       stroke-dashoffset: 100;

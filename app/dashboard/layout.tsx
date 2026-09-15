@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { AppShell } from "@/components/layout/app-shell";
-import { isAdmin } from "@/lib/admin/policy";
+import { TeacherShell } from "@/components/teacher/teacher-shell";
 import { logoutTeacher } from "@/lib/actions/auth";
+import { isAdmin } from "@/lib/admin/policy";
 import { requireTeacher } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -14,13 +14,12 @@ export default async function DashboardLayout({
   const teacher = await requireTeacher();
 
   return (
-    <AppShell
-      role="teacher"
-      user={{ name: teacher.name, email: teacher.email }}
+    <TeacherShell
+      teacher={{ id: teacher.id, name: teacher.name, email: teacher.email }}
       signOut={logoutTeacher}
       switchPortal={isAdmin(teacher) ? { href: "/admin", label: "Admin console" } : undefined}
     >
       {children}
-    </AppShell>
+    </TeacherShell>
   );
 }

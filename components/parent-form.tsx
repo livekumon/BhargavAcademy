@@ -11,7 +11,7 @@ import { ACADEMY_EMAIL_DOMAIN, academyEmailLocalPart } from "@/lib/identity";
 import type { ParentDirectoryStudent } from "@/lib/queries";
 
 const CHECK_CLASS =
-  "size-4 shrink-0 rounded border-input accent-primary focus-visible:ring-3 focus-visible:ring-ring/50";
+  "size-4 shrink-0 rounded border-input accent-(--brand) focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export function ParentForm({
   action,
@@ -194,14 +194,14 @@ export function ParentForm({
       </fieldset>
 
       {state.error ? (
-        <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <p className="rounded-lg bg-danger-subtle px-3 py-2 text-sm text-danger-subtle-fg">
           {state.error}
         </p>
       ) : null}
 
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={pending || students.length === 0}>
-          {pending ? "Saving..." : submitLabel}
+          {pending ? "Saving…" : submitLabel}
         </Button>
         <Button asChild variant="outline">
           <Link href={cancelHref}>Cancel</Link>

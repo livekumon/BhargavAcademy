@@ -1,5 +1,6 @@
 "use server";
 
+import { flash } from "@/lib/flash";
 import { and, eq, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -82,6 +83,7 @@ export async function createBatch(
   }
 
   revalidatePath("/dashboard");
+  await flash(`${name} created`, { description: "Upload material or add students next." });
   redirect(batchPath(id));
 }
 
@@ -107,6 +109,7 @@ export async function updateBatch(
 
   revalidatePath("/dashboard");
   revalidatePath(batchPath(batchId));
+  await flash("Batch saved");
   redirect(batchPath(batchId));
 }
 
@@ -169,5 +172,6 @@ export async function deleteBatch(batchId: string) {
     .where(and(eq(batches.id, batchId), eq(batches.teacherId, teacher.id)));
 
   revalidatePath("/dashboard");
-  redirect("/dashboard");
+  await flash("Batch deleted");
+  redirect("/dashboard/batches");
 }

@@ -22,9 +22,12 @@ const OPTIONS: { value: MaterialKind; title: string; description: string }[] = [
 export function MaterialKindFields({
   defaultKind = "class_material",
   defaultInstructions = "",
+  defaultDueAt = "",
 }: {
   defaultKind?: MaterialKind;
   defaultInstructions?: string;
+  /** YYYY-MM-DD, or empty for no due date. */
+  defaultDueAt?: string;
 }) {
   const [kind, setKind] = useState<MaterialKind>(defaultKind);
 
@@ -39,10 +42,10 @@ export function MaterialKindFields({
               <label
                 key={option.value}
                 className={cn(
-                  "cursor-pointer rounded-xl border p-3 transition-colors",
+                  "cursor-pointer rounded-xl p-3 ring-1 transition-colors duration-(--dur-fast) has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
                   selected
-                    ? "border-primary bg-secondary/70"
-                    : "border-border bg-muted/30 hover:bg-muted/50",
+                    ? "bg-brand-subtle ring-2 ring-brand"
+                    : "bg-surface ring-line hover:bg-sunken",
                 )}
               >
                 <input
@@ -54,7 +57,7 @@ export function MaterialKindFields({
                   onChange={() => setKind(option.value)}
                 />
                 <p className="text-sm font-medium">{option.title}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1 text-xs text-content-muted">
                   {option.description}
                 </p>
               </label>
@@ -74,12 +77,26 @@ export function MaterialKindFields({
             rows={4}
             placeholder="Tell students what to solve and how to present their work."
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-content-muted">
             Students see these instructions separately from class material.
           </p>
+          <div className="max-w-56 space-y-2 pt-2">
+            <Label htmlFor="dueAt">Due date (optional)</Label>
+            <input
+              id="dueAt"
+              name="dueAt"
+              type="date"
+              defaultValue={defaultDueAt}
+              className="h-10 w-full rounded-lg border border-input bg-raised px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            />
+            <p className="text-xs text-content-muted">Late work is flagged for you and the parent.</p>
+          </div>
         </div>
       ) : (
-        <input type="hidden" name="instructions" value="" />
+        <>
+          <input type="hidden" name="instructions" value="" />
+          <input type="hidden" name="dueAt" value="" />
+        </>
       )}
     </div>
   );

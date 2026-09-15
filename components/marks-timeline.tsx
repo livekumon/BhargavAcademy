@@ -43,13 +43,9 @@ export function MarksTimeline({
               {formatScore(entry.marks)}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-pretty">
-                {entry.chapterTitles.join(", ") || "Marks"}
-              </p>
+              <p className="text-sm font-medium text-pretty">{entry.chapterTitles.join(", ") || "Marks"}</p>
               <p className="text-xs text-content-subtle">
-                {showContext && entry.batchName
-                  ? `${entry.batchName} · ${entry.courseTitle} · `
-                  : ""}
+                {showContext && entry.batchName ? `${entry.batchName} · ${entry.courseTitle} · ` : ""}
                 Exam date {formatDateInput(toDateInput(entry.recordedAt))}
                 {logged ? ` · logged ${logged}` : ""}
               </p>

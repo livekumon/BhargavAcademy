@@ -4,7 +4,16 @@ import { revalidatePath } from "next/cache";
 import { isAdmin } from "@/lib/admin/policy";
 import { audit } from "@/lib/audit";
 import { requireTeacher } from "@/lib/auth";
-import { createLead, getLead, updateLeadStatus } from "@/lib/leads";
+import { flash } from "@/lib/flash";
+import {
+  asLeadStatus,
+  createLead,
+  getLead,
+  LEAD_STATUS_LABEL,
+  updateLeadNotes,
+  updateLeadStatus,
+  type LeadRecord,
+} from "@/lib/leads";
 import { leadsPath } from "@/lib/paths";
 
 export type EnquiryState = {
@@ -71,21 +80,32 @@ export async function submitEnquiry(
   return { ok: true };
 }
 
+/** Teachers may only work leads the admin assigned to them; admins may work any. */
+function canWorkLead(lead: LeadRecord, teacher: { id: string } & Parameters<typeof isAdmin>[0]) {
+  return lead.assignedTeacherId === teacher.id || isAdmin(teacher);
+}
+
+function revalidateLeadPaths() {
+  revalidatePath(leadsPath());
+  revalidatePath("/admin/leads");
+  revalidatePath("/dashboard", "layout");
+}
+
 /** Teachers may only move leads the admin assigned to them. */
 export async function setLeadStatus(formData: FormData) {
   const teacher = await requireTeacher();
   const id = String(formData.get("id") ?? "").trim();
   const status = String(formData.get("status") ?? "").trim();
-  if (!id || (status !== "new" && status !== "contacted")) {
+  if (!id || asLeadStatus(status) !== status) {
     return;
   }
 
   const lead = await getLead(id);
-  if (!lead || (lead.assignedTeacherId !== teacher.id && !isAdmin(teacher))) {
+  if (!lead || !canWorkLead(lead, teacher)) {
     return;
   }
 
-  await updateLeadStatus(id, status);
+  const next = await updateLeadStatus(id, asLeadStatus(status));
   await audit({
     actor: { id: teacher.id, role: "teacher", name: teacher.name },
     action: "lead.status",
@@ -93,6 +113,28 @@ export async function setLeadStatus(formData: FormData) {
     entityId: id,
     summary: `${teacher.name} marked ${lead.studentName}'s enquiry as ${status}`,
   });
-  revalidatePath(leadsPath());
-  revalidatePath("/admin/leads");
+  revalidateLeadPaths();
+  await flash(`${next.studentName} marked as ${LEAD_STATUS_LABEL[next.status].toLowerCase()}`, {
+    undo: { kind: "lead-status", id, status: lead.status },
+  });
+}
+
+export async function undoLeadStatus(id: string, status: string) {
+  const teacher = await requireTeacher();
+  const lead = await getLead(id);
+  if (!lead || !canWorkLead(lead, teacher)) return;
+  await updateLeadStatus(id, asLeadStatus(status));
+  revalidateLeadPaths();
+}
+
+export async function saveLeadNotes(formData: FormData) {
+  const teacher = await requireTeacher();
+  const id = String(formData.get("id") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
+  if (!id) return;
+  const lead = await getLead(id);
+  if (!lead || !canWorkLead(lead, teacher)) return;
+  await updateLeadNotes(id, notes);
+  revalidateLeadPaths();
+  await flash(`Notes saved for ${lead.studentName}`);
 }

@@ -3,7 +3,6 @@
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { SELECT_CLASS_NAME } from "@/lib/academics";
 import { enrollStudent, type StudentState } from "@/lib/actions/students";
 
 export function EnrollStudentForm({
@@ -20,7 +19,7 @@ export function EnrollStudentForm({
 
   if (batches.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <p className="text-sm text-content-muted">
         This student is already in every batch.
       </p>
     );
@@ -28,13 +27,13 @@ export function EnrollStudentForm({
 
   return (
     <form action={formAction} className="flex flex-wrap items-end gap-2">
-      <div className="min-w-48 flex-1 space-y-2">
+      <div className="min-w-48 flex-1 space-y-1.5">
         <Label htmlFor="enrollBatchId">Add to another batch</Label>
         <select
           id="enrollBatchId"
           name="batchId"
           required
-          className={SELECT_CLASS_NAME}
+          className="h-10 w-full rounded-lg border border-input bg-raised px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           defaultValue=""
         >
           <option value="" disabled>
@@ -47,11 +46,11 @@ export function EnrollStudentForm({
           ))}
         </select>
       </div>
-      <Button type="submit" variant="outline" disabled={pending}>
-        {pending ? "Adding..." : "Enroll"}
+      <Button type="submit" size="lg" disabled={pending}>
+        {pending ? "Enrolling…" : "Enroll"}
       </Button>
       {state.error ? (
-        <p className="w-full text-sm text-destructive">{state.error}</p>
+        <p role="alert" className="w-full text-sm text-danger">{state.error}</p>
       ) : null}
     </form>
   );

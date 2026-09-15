@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import type { EnrollableStudent } from "@/components/enroll-batch-students-form";
 
 const CHECK_CLASS =
-  "size-4 shrink-0 rounded border-input accent-primary focus-visible:ring-3 focus-visible:ring-ring/50";
+  "size-4 shrink-0 rounded border-input accent-(--brand) focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export function CreateBatchWizard({
   courses,
@@ -133,7 +133,7 @@ export function CreateBatchWizard({
           </div>
 
           {state.error ? (
-            <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <p className="rounded-lg bg-danger-subtle px-3 py-2 text-sm text-danger-subtle-fg">
               {state.error}
             </p>
           ) : null}
@@ -228,7 +228,7 @@ export function CreateBatchWizard({
           )}
 
           {state.error ? (
-            <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <p className="rounded-lg bg-danger-subtle px-3 py-2 text-sm text-danger-subtle-fg">
               {state.error}
             </p>
           ) : null}

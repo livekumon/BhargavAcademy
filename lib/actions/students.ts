@@ -1,5 +1,8 @@
 "use server";
 
+import { flash } from "@/lib/flash";
+import { isAdmin } from "@/lib/admin/policy";
+import { getLead, updateLeadStatus } from "@/lib/leads";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -66,6 +69,21 @@ async function studentOwnedByTeacher(teacherId: string, studentId: string) {
     .limit(1);
 
   return Boolean(row);
+}
+
+/** A student created from a website enquiry closes that lead, if it's this teacher's to close. */
+async function markLeadEnrolled(formData: FormData, teacher: { id: string } & Parameters<typeof isAdmin>[0]) {
+  const leadId = String(formData.get("leadId") ?? "").trim();
+  if (!leadId) return;
+  try {
+    const lead = await getLead(leadId);
+    if (!lead || (lead.assignedTeacherId !== teacher.id && !isAdmin(teacher))) return;
+    await updateLeadStatus(leadId, "enrolled");
+    revalidatePath("/dashboard/leads");
+    revalidatePath("/admin/leads");
+  } catch {
+    // The lead may have been removed; the student is created either way.
+  }
 }
 
 function safeNext(value: unknown) {
@@ -163,6 +181,8 @@ export async function createStudent(
     }
 
     revalidateStudentPaths(batch.id, existing.id);
+    await markLeadEnrolled(formData, teacher);
+    await flash(`${existing.name} added to ${batch.name}`);
     redirect(safeNext(formData.get("next")) || batchPath(batch.id));
   }
 
@@ -192,6 +212,8 @@ export async function createStudent(
   }
 
   revalidateStudentPaths(batch.id, studentId);
+  await markLeadEnrolled(formData, teacher);
+  await flash(`${name} added`, { description: `Enrolled in ${batch.name}. Their login is ${email}.` });
   redirect(safeNext(formData.get("next")) || batchPath(batch.id));
 }
 
@@ -273,6 +295,7 @@ export async function updateStudent(
   }
 
   revalidateStudentPaths(batchId, studentId);
+  await flash(`${name} saved`);
   redirect(safeNext(formData.get("next")) || batchPath(batchId));
 }
 
@@ -317,6 +340,7 @@ export async function enrollStudent(
 
   await enrollInBatch(studentId, batch.id);
   revalidateStudentPaths(batch.id, studentId);
+  await flash(`Enrolled in ${batch.name}`);
   redirect(studentManagePath(studentId));
 }
 
@@ -425,6 +449,7 @@ export async function enrollDirectoryStudents(formData: FormData) {
     revalidateStudentPaths(batch.id, studentId);
   }
 
+  await flash(`Enrolled in ${batch.name}`);
   redirect(safeNext(formData.get("next")) || studentsPath());
 }
 
@@ -446,6 +471,7 @@ export async function deleteDirectoryStudents(formData: FormData) {
   }
 
   revalidatePath(studentsPath());
+  await flash(`${studentIds.length === 1 ? "1 student" : `${studentIds.length} students`} removed`);
   redirect(safeNext(formData.get("next")) || studentsPath());
 }
 
@@ -467,6 +493,7 @@ export async function deleteDirectoryStudent(
   }
 
   revalidatePath(studentsPath());
+  await flash(`${owned.student.name} removed`);
   redirect(safeNext(formData?.get("next")) || studentsPath());
 }
 
@@ -484,7 +511,7 @@ export async function deleteStudent(
   }
 
   await unenrollFromBatch(studentId, batchId);
-
   revalidateStudentPaths(batchId, studentId);
+  await flash(`${owned.student.name} removed from ${owned.batch.name}`);
   redirect(safeNext(formData?.get("next")) || batchPath(batchId));
 }

@@ -1,12 +1,13 @@
 "use server";
 
+import { flash } from "@/lib/flash";
 import { hash } from "bcryptjs";
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireTeacher } from "@/lib/auth";
 import { db, ensureDatabase, nextAcademyEmail } from "@/lib/db";
-import { resolveAccountPassword } from "@/lib/identity";
+import { DEFAULT_PASSWORD, resolveAccountPassword } from "@/lib/identity";
 import { parentChildPath, parentManagePath, parentsPath } from "@/lib/paths";
 import {
   getOwnedParentForTeacher,
@@ -132,6 +133,7 @@ export async function createParent(
   });
   await setParentStudents(parentId, studentIds);
   revalidateParentPaths(parentId, studentIds);
+  await flash(`Parent login created for ${name}`, { description: `They sign in with ${email}.` });
   redirect(parentsPath());
 }
 
@@ -197,6 +199,7 @@ export async function updateParent(
   revalidateParentPaths(parentId, [
     ...new Set([...owned.students.map((student) => student.id), ...studentIds]),
   ]);
+  await flash(`${name} saved`);
   redirect(parentsPath());
 }
 
@@ -213,5 +216,33 @@ export async function deleteParent(formData: FormData) {
   const studentIds = owned.students.map((student) => student.id);
   await db.delete(parents).where(eq(parents.id, parentId));
   revalidateParentPaths(parentId, studentIds);
+  await flash(`${owned.name}'s parent login deleted`);
   redirect(parentsPath());
+}
+
+export async function resetParentPassword(parentId: string) {
+  const teacher = await requireTeacher();
+  await ensureDatabase();
+
+  const owned = await getOwnedParentForTeacher(teacher.id, parentId);
+  if (!owned) {
+    redirect(parentsPath());
+  }
+
+  await db
+    .update(parents)
+    .set({ passwordHash: await hash(DEFAULT_PASSWORD, 10), mustChangePassword: true })
+    .where(eq(parents.id, parentId));
+
+  revalidateParentPaths(parentId, owned.students.map((student) => student.id));
+  await flash(`${owned.name}'s password reset to ${DEFAULT_PASSWORD}`, {
+    description: "They'll be asked to choose a new one when they sign in.",
+  });
+  redirect(parentsPath());
+}
+
+export async function deleteParentById(parentId: string) {
+  const formData = new FormData();
+  formData.set("parentId", parentId);
+  await deleteParent(formData);
 }

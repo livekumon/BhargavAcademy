@@ -64,7 +64,7 @@ function LookupListCard({
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <form action={addAction} className="space-y-3 rounded-xl border bg-muted/30 p-3">
+        <form action={addAction} className="space-y-3 rounded-xl border bg-surface p-3">
           <input type="hidden" name="intent" value="add" />
           <input type="hidden" name="listKey" value={listKey} />
           <div className="space-y-2">
@@ -92,7 +92,7 @@ function LookupListCard({
         </form>
 
         {options.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-content-muted">
             No options yet. Add the first one above.
           </p>
         ) : (
@@ -138,10 +138,10 @@ function LookupOptionRow({
             defaultValue={option.label}
             required
           />
-          <p className="text-xs text-muted-foreground">Value: {option.value}</p>
+          <p className="text-xs text-content-muted">Value: {option.value}</p>
         </div>
         <Button type="submit" variant="outline" disabled={pending}>
-          {pending ? "Saving..." : "Save"}
+          {pending ? "Saving…" : "Save"}
         </Button>
       </form>
 
@@ -201,7 +201,7 @@ function LookupOptionRow({
 function LookupMessage({ state }: { state: LookupState }) {
   if (!state.error) return null;
   return (
-    <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+    <p className="rounded-lg bg-danger-subtle px-3 py-2 text-sm text-danger-subtle-fg">
       {state.error}
     </p>
   );

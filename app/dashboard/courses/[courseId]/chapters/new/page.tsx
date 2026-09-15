@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ChapterForm } from "@/components/chapter-form";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormPage } from "@/components/teacher/form-page";
 import { createLibraryChapter } from "@/lib/actions/chapters";
 import { requireTeacher } from "@/lib/auth";
 import { libraryCoursePath } from "@/lib/paths";
@@ -25,22 +25,17 @@ export default async function NewLibraryChapterPage({
   }
 
   return (
-    <Card className="mx-auto max-w-2xl">
-      <CardHeader>
-        <CardTitle className="font-heading text-3xl">Add a chapter</CardTitle>
-        <CardDescription>
-          This chapter will appear in every batch that uses {course.title}.
-          Upload PDFs from inside a batch.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <FormPage
+      crumbs={[{ label: "Course library", href: "/dashboard/courses" }, { label: course.title, href: libraryCoursePath(course.id) }, { label: "New chapter" }]}
+      title={<>Add a chapter</>}
+      description={<>This chapter will appear in every batch that uses {course.title}. Upload PDFs from inside a batch.</>}
+    >
         <ChapterForm
           action={createLibraryChapter.bind(null, course.id)}
           submitLabel="Create chapter"
           cancelHref={libraryCoursePath(course.id)}
           showPdf={false}
         />
-      </CardContent>
-    </Card>
+      </FormPage>
   );
 }

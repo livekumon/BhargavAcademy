@@ -11,7 +11,7 @@ import { batchPath } from "@/lib/paths";
 import { cn } from "@/lib/utils";
 
 const CHECK_CLASS =
-  "size-4 shrink-0 rounded border-input accent-primary focus-visible:ring-3 focus-visible:ring-ring/50";
+  "size-4 shrink-0 rounded border-input accent-(--brand) focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export type EnrollableStudent = {
   id: string;

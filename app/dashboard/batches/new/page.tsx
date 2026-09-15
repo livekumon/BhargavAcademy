@@ -3,13 +3,7 @@ import Link from "next/link";
 import { BookMarked } from "lucide-react";
 import { CreateBatchWizard } from "@/components/create-batch-wizard";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { FormPage } from "@/components/teacher/form-page";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireTeacher } from "@/lib/auth";
 import { getTeacherCourses, getTeacherStudents } from "@/lib/queries";
@@ -46,15 +40,11 @@ export default async function NewBatchPage() {
   }
 
   return (
-    <Card className="mx-auto max-w-2xl">
-      <CardHeader>
-        <CardTitle className="font-heading text-3xl">Create a batch</CardTitle>
-        <CardDescription>
-          Pick the course first. Students can wait until you are ready to enroll
-          them.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <FormPage
+      crumbs={[{ label: "Batches", href: "/dashboard/batches" }, { label: "New batch" }]}
+      title={<>Create a batch</>}
+      description={<>Pick the course first. Students can wait until you are ready to enroll them.</>}
+    >
         <CreateBatchWizard
           courses={courses.map((course) => ({
             id: course.id,
@@ -62,9 +52,8 @@ export default async function NewBatchPage() {
             chapterCount: course.chapterCount,
           }))}
           students={students}
-          cancelHref="/dashboard"
+          cancelHref="/dashboard/batches"
         />
-      </CardContent>
-    </Card>
+      </FormPage>
   );
 }
