@@ -72,8 +72,26 @@ export function submissionPath(materialId: string, studentId: string) {
   return `/api/submissions/${encodeURIComponent(materialId)}/${encodeURIComponent(studentId)}`;
 }
 
-export function parentChildPath(studentId: string) {
-  return `/parent/students/${encodeURIComponent(studentId)}`;
+export type ParentChildTab = "overview" | "chapters" | "marks";
+
+export function parseParentChildTab(
+  value: string | string[] | undefined,
+): ParentChildTab {
+  const tab = Array.isArray(value) ? value[0] : value;
+  return tab === "chapters" || tab === "marks" ? tab : "overview";
+}
+
+export function parentChildPath(
+  studentId: string,
+  query?: { tab?: ParentChildTab; batch?: string; paper?: string },
+) {
+  const base = `/parent/students/${encodeURIComponent(studentId)}`;
+  const params = new URLSearchParams();
+  if (query?.tab && query.tab !== "overview") params.set("tab", query.tab);
+  if (query?.batch) params.set("batch", query.batch);
+  if (query?.paper) params.set("paper", query.paper);
+  const search = params.toString();
+  return search ? `${base}?${search}` : base;
 }
 
 export function studentMarksPath(query?: {
